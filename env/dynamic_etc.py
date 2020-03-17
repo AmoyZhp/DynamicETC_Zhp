@@ -10,31 +10,7 @@ SENSITIVITY_TO_TRAVEL_COST = 0.5
 VALUE_OF_TIME = 0.5
 ACTION_UPPER_BOUND = 6
 
-class Path():
-    def __init__(self):
-        self.roads = []
-        self.begin = -1
-        self.end = -1
-        self.length = 0
 
-    def add_road(self, road):
-        if len(self.roads) == 0:
-            self.roads.append(road)
-            self.begin = road.begin
-            self.end = road.end
-        else:
-            if self.roads[-1].end == road.begin:
-                self.roads.append(road)
-                self.end = road.end
-            else:
-                print(" added road begin point don't equal to last road end point")
-        self.length = len(self.roads)
-    
-    def is_road_in_path(self, road):
-        for r in self.roads:
-            if r.id == road.id:
-                return True
-        return False
 
 
 class OriginDestinationPair():
