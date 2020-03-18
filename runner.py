@@ -5,25 +5,25 @@ class Runner():
         super().__init__()
     
     def process_state_to_obs(self, state, i):
-        pass
+        return []
 
     def run(self):
-        env = DynamicETC()
-        action_space = env.action_space
-        agents = []
+        dyenv = DynamicETC()
+        action_space = dyenv.action_space
+        agents = {}
         # each road has an agent to adjust toll
-        for i in range(action_space) :
-            agents.append(DefaultAgent())
-        
-        state = env.reset()
+        for i in range(action_space[2]) :
+            agents[i] = DefaultAgent()
+
+        state = dyenv.reset()
         while True:
-            actions = []
+            actions = {}
             # get union action
-            for i in range(len(agents)):
+            for key, agent in agents.items():
                 obs = self.process_state_to_obs(state, i)
-                action = agents[i].act(obs)
-                actions.append(action)
-            next_state, reward, terminal, info = env.step(actions)
+                act = agent.act(obs)
+                actions[key] = act
+            next_state, reward, terminal, info = dyenv.step(actions)
             if terminal:
                 break
             state = next_state

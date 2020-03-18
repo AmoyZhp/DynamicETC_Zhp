@@ -12,12 +12,24 @@ class Node():
         self.val = val
 
 class Road():
-    def __init__(self, begin = -1, end = -1, vechicels = -1, capacity = -1):
+    def __init__(self, begin = -1, end = -1, vechicels = 0, length = 0, toll = 0):
         self.id = -1
         self.begin = begin
         self.end = end
         self.vechicels = vechicels
-        self.capacity = capacity
+        self.length = length
+        self.capacity = length * 50
+        self.free_flow_travel_time = self.length * 0.5
+        self.toll = 0.0
+
+    def set_toll(self, toll):
+        self.toll = toll
+
+    def set_length(self, length):
+        self.length = length
+        self.capacity = self.length * 50
+        self.free_flow_travel_time = self.length * 0.5
+
 
 class Path():
     def __init__(self, origin, destination):
@@ -61,18 +73,6 @@ class Graph():
             self.road_martix.append(row)
         self.node_id = 0
         self.road_id = 0
-    """assign id to a node, the id represent the key value in dict
-
-    """    
-    def assign_node_id(self, node):
-        if self.node_id >= len(self.adjacency_list):
-            print(" node number is out of capatiry")
-        node.id = self.node_id
-        self.node_id += 1
-
-    def assign_road_id(self,road):
-        road.id = self.road_id
-        self.road_id += 1
 
     def update_road(self, begin, end, vechicels):
         if begin < 0 or begin > len(self.adjacency_list) \
@@ -85,34 +85,15 @@ class Graph():
             else:
                 print("invalid road")
 
-    def add_node(self, val):
-        node = Node(val)
-        node.next = None
-        self.assign_node_id(node)
-        self.adjacency_list[node.id] = node
-
-    def get_nodes_cnt(self):
-        return self.node_id
-
-    def get_roads_cnt(self):
-        return self.road_id
-     
-    def add_road(self, begin, end, val):
-        begin_node = self.adjacency_list[begin]
-        end_node = self.adjacency_list[end]
-        if begin_node != None and end_node != None:
-            node = Node()
-            node.id = end_node.id
-            node.val = end_node.val
-            # insert into list head
-            node.next = begin_node.next
-            begin_node.next = node
-            self.road_martix[begin][end] = Road(begin, end, val)
-            self.assign_road_id(self.road_martix[begin][end])
-        else:
-            print(" graph road is illegal")
-
     def get_node_related_out_roads(self, node_id):
+        """get road whose origin is node_id
+        
+        Arguments:
+            node_id {int} -- node
+        
+        Returns:
+            [List] -- [related road list]
+        """        
         roads = []
         for road in self.road_martix[node_id]:
             if road != None and road.begin == node_id:
@@ -120,6 +101,14 @@ class Graph():
         return roads
     
     def get_node_related_in_roads(self, node_id):
+        """get road whose destination is node_id
+        
+        Arguments:
+            node_id {int} -- node
+        
+        Returns:
+            [List] -- [related road list]
+        """    
         roads = []
         for row in self.road_martix:
             road = row[node_id]
@@ -180,7 +169,40 @@ class Graph():
             if neighbor == None :
                 stack.pop()
         return paths
+    
+    def add_road(self, begin, end, val):
+        begin_node = self.adjacency_list[begin]
+        end_node = self.adjacency_list[end]
+        if begin_node != None and end_node != None:
+            node = Node()
+            node.id = end_node.id
+            node.val = end_node.val
+            # insert into list head
+            node.next = begin_node.next
+            begin_node.next = node
+            self.road_martix[begin][end] = Road(begin, end, val)
+            self.assign_road_id(self.road_martix[begin][end])
+        else:
+            print(" graph road is illegal in add road")
+    
+    def add_biroad(self, origin, destination, otd_val=0, dto_val=0):
+        """add bidirectional
+        
+        Arguments:
+            origin {[int]]} -- index of node
+            destination {int} -- index of node
+            otd_val {int} -- val of road origin to destination
+            dto_val {int} -- val of road destination to origin
+        """        
+        self.add_road(origin, destination, otd_val)
+        self.add_road(destination, origin, dto_val)
 
+    def add_node(self, val):
+        node = Node(val)
+        node.next = None
+        self.assign_node_id(node)
+        self.adjacency_list[node.id] = node
+    
     def legal_road(self,origin, destination):
         if origin == destination:
             return False
@@ -199,6 +221,23 @@ class Graph():
         if node_id < 0 or node_id >= self.node_id:
             return False
         return True
+
+    def get_nodes_cnt(self):
+        return self.node_id
+
+    def get_roads_cnt(self):
+        return self.road_id
+
+    def assign_node_id(self, node):
+        if self.node_id >= len(self.adjacency_list):
+            print(" node number is out of capatiry")
+        node.id = self.node_id
+        self.node_id += 1
+
+    def assign_road_id(self,road):
+        road.id = self.road_id
+        self.road_id += 1
+
 
 
 

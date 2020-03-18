@@ -1,5 +1,6 @@
 import gym
 import math
+import random
 from env.graph import Graph
 
 INTERVALS = 10
@@ -9,6 +10,10 @@ MAX_TIMESTEP = 6
 SENSITIVITY_TO_TRAVEL_COST = 0.5
 VALUE_OF_TIME = 0.5
 ACTION_UPPER_BOUND = 6
+LENGTH_INTERVAL = [4, 10]
+PEEK_DEMAND = [8, 12]
+INIT_VEHICLES_RATE = [0.5, 0.7]
+INIT_PEEK_RATE = 0.6
 
 
 
@@ -20,23 +25,29 @@ class OriginDestinationPair():
             origin : it is the origin zone, reprensented as node id
             destination : it is tht destination zone, represented as node id
             demand: the traffic between origin and destination, it is a integer number
-            path set: all path connect origin to destinaion. it is a set. each element is a list. the list element is road, 
+            path set: all path connect origin to destination. it is a set. each element is a list. the list element is road, 
                 roads concat become a path
     """    
     def __init__(self, origin, destination, paths):
         self.origin = origin
-        self.destinaion = destinaion
+        self.destination = destination
         self.paths = paths
         self.demand = 0
-        self.contained_road = {}
+        self.contained_roads = {}
         for path in self.paths:
             for road in path.roads:
-                if contained_road.get(road.id) == None:
-                    contained_road[road.id] = road
+                if self.contained_roads.get(road.id) == None:
+                    self.contained_roads[road.id] = road
 
-    def update_demand(self):
-        # update deman depand on traffic deman on each road
-        pass
+    def get_contained_roads(self):
+        return self.contained_roads.values()
+
+    def add_demand(self, num):
+        self.demand += 0
+    
+    def set_demand(self, num):
+        self.demand = 0
+        
 
 class DynamicETC(gym.Env):
     """
@@ -46,7 +57,7 @@ class DynamicETC(gym.Env):
     Graph:
         The road network graph
 
-    Observation:
+    State :
         Type: List(|E| * |V|) |E| reprensent the numbers of road in graph,  |V| represent the numbers
         of node in graph
         (i, j) means the number of vechicels in road i whose destination is node j
@@ -58,41 +69,25 @@ class DynamicETC(gym.Env):
     Para
     """    
     def __init__(self):
-        self.graph = Graph()
-        self.initGraph(self.graph)
+        self.graph = self.init_graph()
 
-        # state, od, graph should be in same sisutation.
-        # only state will be directly updated
-        # od and graph updated based on state 
         self.max_timestep = MAX_TIMESTEP
         self.timestep = 0
-
-        # this is a list whose len equals to max_timestep which store the states
-        # its dimension is max_timestep * road cnt * node cnt
-        self.history_state = [] 
-        for _ in range(self.max_timestep):
-            self.history_state.append([ 
-                [0 for _ in range(self.graph.get_nodes_cnt)] 
-                    for _ in range(self.graph.get_roads_cnt) ])
-
+        self.history_state = self.init_state(self.graph, self.max_timestep) 
         # this represent the current state of environment
         self.state = self.history_state[0]
-        self.init_state(self.state)
 
         # a matrix sotre the originDesntion. 
         # (i,j) represnet the OD whose origin is i and destination is j
-        self.originDestinationMatrix = []
-        for i in range(self.graph.get_nodes_cnt()):
-            self.originDestinationMatrix.append([])
-            for j in range(self.graph.get_nodes_cnt()):
-                self.originDestinationMatrix[i].append(
-                    OriginDestinationPair(origin=i, destinaion=j,paths=self.graph.get_paths_between_two_zone(origin, destinaion))
+        self.originDestinationMatrix = self.init_od(self.graph)
+        # state, od, graph should be in same sisutation.
+        # only state will be directly updated
+        # od and graph updated based on state 
+        # this is a list whose len equals to max_timestep which store the states
+        # its dimension is max_timestep * road cnt * node cnt
+        self.update_graph(self.state)
+        self.update_od(self.state)
 
-        # update originDestinationMatrix based on state
-        self.update_od()
-
-        # graph attribute is based on state
-        self.update_graph()
 
         # indivicudal action value bewteen 0 and 1
         # and it is a joint action which has roads_cnt actions
@@ -104,15 +99,35 @@ class DynamicETC(gym.Env):
         self.omega_prime = SENSITIVITY_TO_TRAVEL_COST
         self.constant_a = CONSTANT_A
         self.constant_b = CONSTANT_B
+        self.peek_rate = 0.6
 
-    def step(self, action):
-        for i in len(self.state):
+    def step(self, actions):
+        # assign toll to each road
+        for key, value in actions.items():
+            road = self.graph.get_road_by_id(key)
+            road.set_toll(value)
+
+        for i in range(len(self.state)):
             s_e = self.state[i]
-            for j in len(s_e):
+            for j in range(len(s_e)):
                 s_e_j = s_e[j]
-                self.history_state[self.timestep+1][i][j] = s_e_j - self.cal_road_out(i, j) + self.cal_road_in(i, j)
+                road = self.graph.get_road_by_id(i)
+                od = self.originDestinationMatrix[road.begin][j]
+                if len(od.paths) > 0:
+                    # state transition function
+                    self.history_state[self.timestep+1][i][j] = s_e_j - self.cal_road_out(i, j) + self.cal_road_in(i, j)
+                    # new vehilces added to road
+                    self.history_state[self.timestep+1][i][j] += random.randint(8, 12) * self.tau * self.peek_rate
         self.timestep += 1
+
+        if self.timestep <= 3:
+            self.peek_rate += 0.1
+        else:
+            self.peek_rate -= 0.1
+
         self.state = self.history_state[self.timestep]
+        self.update_od(self.state)
+        self.update_graph(self.state)
         reward = self.cal_reward()
         terminal = False
         if self.timestep == self.max_timestep:
@@ -121,7 +136,11 @@ class DynamicETC(gym.Env):
         return self.state, reward, terminal, info
 
     def reset(self):
-        pass
+        self.history_state = self.init_state(self.graph, self.max_timestep) 
+        self.state = self.history_state[0]
+        self.update_graph(self.state)
+        self.update_od(self.state)
+        return self.state
 
     def render(self,mode=""):
         pass
@@ -143,18 +162,18 @@ class DynamicETC(gym.Env):
 
         primary_od_demand = self.originDestinationMatrix[target_road.begin][destination].demand
 
-        related_roads = self.graph.get_node_related_roads(target_road.begin)
+        related_in_roads = self.graph.get_node_related_in_roads(target_road.begin)
         secondary_od_demand = 0
         # find the road which end point is begin point of target road
-        for r in related_roads:
-            if r.end == target_road.begin:
-                secondary_od_demand += self.cal_road_out(r, destination)
+        for r in related_in_roads:
+            secondary_od_demand += self.cal_road_out(r.id, destination)
 
         # paths contain target road
         paths_contains_target_road = self.find_contain_road_paths(target_road.begin, destination, target_road)
         result = 0
         for path in paths_contains_target_road:
-            result = result + (primary_od_demand + secondary_od_demand) * self.portion_of_traffic_demand(target_road.begin, destination, path)
+            result = (result + (primary_od_demand + secondary_od_demand) 
+                * self.portion_of_traffic_demand(target_road.begin, destination, path))
         return result
 
     def cal_road_out(self, e, destination):
@@ -170,8 +189,8 @@ class DynamicETC(gym.Env):
         # last num is sum of col in row e
         road = self.graph.get_road_by_id(e)
         vechicels_in_e = road.vechicels
-        result = self.state[e][destination] * self.tau / (road.t_0 * 
-                    ( 1 + self.constant_a *（vechicels_in_e / road.capacity）** self.constant_b) )
+        result = self.state[e][destination] * self.tau / (road.free_flow_travel_time 
+            * ( 1 + self.constant_a * (vechicels_in_e / road.capacity) ** self.constant_b ))
         return result
     
     def find_contain_road_paths(self, begin, end, road):
@@ -201,12 +220,16 @@ class DynamicETC(gym.Env):
             begin {int} -- index of begin node
             end {int} -- index of end  node
             target_path {[Path]} -- target path
-        """        
+        """
+        if begin == end:
+            return 0
         paths = self.originDestinationMatrix[begin][end].paths
-        base = 0
+        base = 0.0
         for path in paths:
-            base = base + math.exp(-self.omega_prime * self.cal_travel_cost(path))
-        portion = math.exp(-self.omega_prime * self.cal_travel_cost(target_path)) / base
+            base = base + math.exp(-self.omega_prime * self.cal_travel_cost(path)) 
+        if base == 0.0:
+            print(" error")
+        portion = math.exp(-self.omega_prime * self.cal_travel_cost(target_path))/ base
         return portion
     
     def cal_travel_cost(self, path):
@@ -218,9 +241,9 @@ class DynamicETC(gym.Env):
         Returns:
             int -- travel cost
         """        
-        cost = 0
+        cost = 0.0
         for road in path.roads:
-            cost += road.e + self.omega * self.cal_travel_time(road)
+            cost += road.toll * 1.0 + self.omega * self.cal_travel_time(road)
         return cost
     
     def cal_travel_time(self, road):
@@ -232,37 +255,85 @@ class DynamicETC(gym.Env):
         Returns:
             [int] -- [travel time]
         """        
-        vechicels_in_road = road.vechicels
-        travel_time = road.t_0 * (1 + self.constant_a 
+        vechicels_in_road = road.vechicels * 1.0
+        travel_time = road.free_flow_travel_time * (1 + self.constant_a 
             * (vechicels_in_road / road.capacity) ** self.constant_b)
         return travel_time
 
     def cal_reward(self):
-        roads = self.graph.get_roads()
+        roads = self.graph.get_all_roads()
         reward = 0
         for road in roads:
-            vechicels_number = self.state[road.id][end]
-            reward += vechicels_number * self.tau / (road.t_0 * (1 + self.constant_a 
+            vechicels_number = self.state[road.id][road.end]
+            reward += vechicels_number * self.tau / (road.free_flow_travel_time * (1 + self.constant_a 
                 * (vechicels_number / road.capacity) ** self.constant_b))
         return reward
 
-    def update_od(self):
+    def update_od(self, state):
         for row in self.originDestinationMatrix:
             for od in row:
-                roads = od.contained_road
-                od.demand = 0
-                for road in roads
-                    od.demand += road.vechicels
+                roads = od.get_contained_roads()
+                od.set_demand(0)
+                for road in roads:
+                    od.add_demand(state[road.id][od.destination])
             
-    def update_graph(self):
-        roads = self.graph.get_roads()
+    def update_graph(self, state):
+        roads = self.graph.get_all_roads()
         for road in roads:
             road.vechicels = 0
-            for num in self.state[road.id]:
+            for num in state[road.id]:
                 road.vechicels += num
+    
+    def init_od(self, graph):
+        originDestinationMatrix = []
+        for i in range(graph.get_nodes_cnt()):
+            originDestinationMatrix.append([])
+            for j in range(graph.get_nodes_cnt()):
+                paths = graph.get_paths_between_two_zone(i, j)
+                od = OriginDestinationPair(origin=i, destination=j, paths=paths)
+                originDestinationMatrix[i].append(od)
+        return originDestinationMatrix
+        
 
-    def init_state(self,state):
-        pass
+    def init_state(self,graph, max_timestep):
+        history_state = []
+        for _ in range(max_timestep):
+            # E x V
+            state = [ [0 for _ in range(graph.get_nodes_cnt())] 
+                        for _ in range(graph.get_roads_cnt()) ]
+            history_state.append(state)
+        init_state = history_state[0]
+        roads = graph.get_all_roads()
+        for road in roads:
+            road.set_length(random.randint(LENGTH_INTERVAL[0], LENGTH_INTERVAL[1]))
+            road.vechicels = road.capacity * random.uniform(INIT_VEHICLES_RATE[0], INIT_VEHICLES_RATE[1])
+            # assume this is full connected graph
+            rate = 0.0
+            for i in range(len(state[road.id])):
+                paths = graph.get_paths_between_two_zone(road.begin, i)
+                if len(paths) != 0:
+                    rate = random.uniform(0.0, 1 - rate)
+                    init_state[road.id][i] = road.vechicels * rate
+        return history_state
 
     def init_graph(self):
-        pass
+        """ this method focus structue of graph, dose't concern about value of road or node 
+        """        
+        graph = Graph(7)
+        for _ in range(7):
+            graph.add_node(1)
+        graph.add_biroad(0,1)
+        graph.add_biroad(0,2)
+        graph.add_biroad(1,3)
+        graph.add_biroad(1,5)
+        graph.add_biroad(0,6)
+        graph.add_biroad(2,4)
+        graph.add_biroad(2,6)
+        graph.add_biroad(3,5)
+        graph.add_biroad(4,6)
+        graph.add_biroad(6,5)
+        return graph
+
+if __name__ == "__main__":
+    dyenv = DynamicETC()
+    print(dyenv.state)
