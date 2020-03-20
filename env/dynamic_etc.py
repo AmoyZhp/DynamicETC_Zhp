@@ -112,12 +112,14 @@ class DynamicETC(gym.Env):
             for j in range(len(s_e)):
                 s_e_j = s_e[j]
                 road = self.graph.get_road_by_id(i)
+                if road.begin == j:
+                    continue
                 od = self.originDestinationMatrix[road.begin][j]
                 if len(od.paths) > 0:
                     # state transition function
                     self.history_state[self.timestep+1][i][j] = s_e_j - self.cal_road_out(i, j) + self.cal_road_in(i, j)
-                    # new vehilces added to road
-                    self.history_state[self.timestep+1][i][j] += random.randint(8, 12) * self.tau * self.peek_rate
+                    # # new vehilces added to road
+                    # self.history_state[self.timestep+1][i][j] += random.randint(8, 12) * self.tau * self.peek_rate
         self.timestep += 1
 
         if self.timestep <= 3:
@@ -166,7 +168,8 @@ class DynamicETC(gym.Env):
         secondary_od_demand = 0
         # find the road which end point is begin point of target road
         for r in related_in_roads:
-            secondary_od_demand += self.cal_road_out(r.id, destination)
+            if r.end != destination:
+                secondary_od_demand += self.cal_road_out(r.id, destination)
 
         # paths contain target road
         paths_contains_target_road = self.find_contain_road_paths(target_road.begin, destination, target_road)
@@ -289,9 +292,9 @@ class DynamicETC(gym.Env):
         for i in range(graph.get_nodes_cnt()):
             originDestinationMatrix.append([])
             for j in range(graph.get_nodes_cnt()):
-                paths = graph.get_paths_between_two_zone(i, j)
-                od = OriginDestinationPair(origin=i, destination=j, paths=paths)
-                originDestinationMatrix[i].append(od)
+                    paths = graph.get_paths_between_two_zone(i, j)
+                    od = OriginDestinationPair(origin=i, destination=j, paths=paths)
+                    originDestinationMatrix[i].append(od)
         return originDestinationMatrix
         
 
@@ -308,12 +311,17 @@ class DynamicETC(gym.Env):
             road.set_length(random.randint(LENGTH_INTERVAL[0], LENGTH_INTERVAL[1]))
             road.vechicels = road.capacity * random.uniform(INIT_VEHICLES_RATE[0], INIT_VEHICLES_RATE[1])
             # assume this is full connected graph
-            rate = 0.0
+            cnt = 0
             for i in range(len(state[road.id])):
-                paths = graph.get_paths_between_two_zone(road.begin, i)
-                if len(paths) != 0:
-                    rate = random.uniform(0.0, 1 - rate)
-                    init_state[road.id][i] = road.vechicels * rate
+                if road.end != i:
+                    paths = graph.get_paths_between_two_zone(road.begin, i)
+                    if len(paths) != 0:
+                        cnt += 1
+            for i in range(len(state[road.id])):
+                if road.end != i:
+                    paths = graph.get_paths_between_two_zone(road.begin, i)
+                    if len(paths) != 0:
+                        init_state[road.id][i] = int(road.vechicels / cnt)
         return history_state
 
     def init_graph(self):
