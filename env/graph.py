@@ -43,17 +43,13 @@ class Road():
             logging.debug(" illegal toll number %d" %(toll))
         self.toll = toll
  
-    def add_vechiceles(self, vechicels):
-        if self.vechicels + vechicels > self.capacity:
-            logging.debug("vechicles is out of capacity now vechicles %d" + 
-                "and add vechicles %d " % (self.vechicels, vechicels))
-            return False
-        elif self.vechicels + vechicels < 0:
-            logging.debug("vechicles is out of capacity now vechicles %d" + 
-                "and add vechicles %d " % (self.vechicels, vechicels))
+    def set_vechiceles(self, vechicels):
+        if vechicels > self.capacity or vechicels < 0:
+            logging.debug("vechicles is out of capacity now vechicles {}".format(self.vechicels) + 
+                "and new vechicles {}".format(vechicels))
             return False
         else:
-            self.vechicels += vechicels
+            self.vechicels = vechicels
             return True
     
     def __str__(self):
@@ -156,21 +152,11 @@ class Graph():
             self.add_road_to_adjacency_list(begin, end)
             self.road_cnt += 1
         
-    def update_vechicels_in_road(self, begin, end, vechicels):
+    def set_vechicels_in_road(self, begin, end, vechicels):
         if self.legal_road(begin, end):
-            self.road_martix[begin][end].add_vechiceles(vechicels)
-            
-        if begin < 0 or begin > len(self.adjacency_list) \
-            or end < 0 or end > len(self.adjacency_list):
-            logging.debug("invalid origin {} or destination {} index", begin, end)
-        else:
-            road = self.road_martix[begin][end]
-            if road.id != -1:
-                road.vechicels = vechicels
-            else:
-                logging.debug("invalid road")
+            self.road_martix[begin][end].set_vechiceles(vechicels)
     
-    def update_toll_in_road(self, begin, end, toll):
+    def set_toll_in_road(self, begin, end, toll):
        if self.legal_road(begin, end):
            self.road_martix[begin][end].set_toll(toll)
 
@@ -229,6 +215,9 @@ class Graph():
         return roads
 
     def get_paths_between_two_zone(self,origin, destination):
+        """ implemented by dfs to find path
+        
+        """
         if not self.legal_node(origin) or not self.legal_node(destination):
             print("illegal input of get_paths_between_two_zone")
             return None

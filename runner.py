@@ -16,6 +16,7 @@ class Runner():
             agents[i] = DefaultAgent()
 
         state = dyenv.reset()
+        cnt = 0
         while True:
             actions = {}
             # get union action
@@ -26,4 +27,6 @@ class Runner():
             next_state, reward, terminal, info = dyenv.step(actions)
             if terminal:
                 break
+            print(cnt)
+            cnt += 1
             state = next_state

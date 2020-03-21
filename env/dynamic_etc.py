@@ -1,6 +1,7 @@
 import gym
 import math
 import random
+import yaml
 from env.graph import Graph
 
 INTERVALS = 10
@@ -105,7 +106,7 @@ class DynamicETC(gym.Env):
         # assign toll to each road
         for key, value in actions.items():
             road = self.graph.get_road_by_id(key)
-            road.set_toll(value)
+            self.graph.set_toll_in_road(road.begin, road.end, value)
 
         for i in range(len(self.state)):
             s_e = self.state[i]
@@ -115,11 +116,12 @@ class DynamicETC(gym.Env):
                 if road.begin == j:
                     continue
                 od = self.originDestinationMatrix[road.begin][j]
-                if len(od.paths) > 0:
+                if od != None:
                     # state transition function
-                    self.history_state[self.timestep+1][i][j] = s_e_j - self.cal_road_out(i, j) + self.cal_road_in(i, j)
+                    updated_value = - self.cal_road_out(i, j) + self.cal_road_in(i, j)
+                    self.history_state[self.timestep+1][i][j] = s_e_j  + updated_value
                     # # new vehilces added to road
-                    # self.history_state[self.timestep+1][i][j] += random.randint(8, 12) * self.tau * self.peek_rate
+                    self.history_state[self.timestep+1][i][j] += random.randint(8, 12) * self.tau * self.peek_rate
         self.timestep += 1
 
         if self.timestep <= 3:
@@ -275,6 +277,8 @@ class DynamicETC(gym.Env):
     def update_od(self, state):
         for row in self.originDestinationMatrix:
             for od in row:
+                if od == None:
+                    continue
                 roads = od.get_contained_roads()
                 od.set_demand(0)
                 for road in roads:
@@ -283,33 +287,41 @@ class DynamicETC(gym.Env):
     def update_graph(self, state):
         roads = self.graph.get_all_roads()
         for road in roads:
-            road.vechicels = 0
+            vechicels = 0
             for num in state[road.id]:
-                road.vechicels += num
+                vechicels += num
+            self.graph.set_vechicels_in_road(road.begin, road.end, vechicels)
     
     def init_od(self, graph):
         originDestinationMatrix = []
-        for i in range(graph.get_nodes_cnt()):
-            originDestinationMatrix.append([])
-            for j in range(graph.get_nodes_cnt()):
-                    paths = graph.get_paths_between_two_zone(i, j)
-                    od = OriginDestinationPair(origin=i, destination=j, paths=paths)
-                    originDestinationMatrix[i].append(od)
+        node_cnt = graph.get_nodes_cnt()
+        for _ in range(node_cnt):
+            row = []
+            for j in range(node_cnt):
+                row.append(None)
+            originDestinationMatrix.append(row)
+        for i in range(node_cnt):
+            for j in range(node_cnt):
+                paths = graph.get_paths_between_two_zone(i, j)
+                if len(paths) > 0:
+                    originDestinationMatrix[i][j] = OriginDestinationPair(i, j ,paths)
         return originDestinationMatrix
         
 
-    def init_state(self,graph, max_timestep):
+    def init_state(self, graph, max_timestep):
         history_state = []
-        for _ in range(max_timestep):
+        road_cnt = graph.get_roads_cnt()
+        node_cnt = graph.get_nodes_cnt()
+        for _ in range(max_timestep+1):
             # E x V
-            state = [ [0 for _ in range(graph.get_nodes_cnt())] 
-                        for _ in range(graph.get_roads_cnt()) ]
+            state = [ [0 for _ in range(node_cnt)] 
+                        for _ in range(road_cnt) ]
             history_state.append(state)
         init_state = history_state[0]
         roads = graph.get_all_roads()
         for road in roads:
-            road.set_length(random.randint(LENGTH_INTERVAL[0], LENGTH_INTERVAL[1]))
-            road.vechicels = road.capacity * random.uniform(INIT_VEHICLES_RATE[0], INIT_VEHICLES_RATE[1])
+            vechicels = road.capacity * random.uniform(INIT_VEHICLES_RATE[0], INIT_VEHICLES_RATE[1])
+            graph.set_vechicels_in_road(road.begin, road.end, vechicels)
             # assume this is full connected graph
             cnt = 0
             for i in range(len(state[road.id])):
@@ -327,20 +339,21 @@ class DynamicETC(gym.Env):
     def init_graph(self):
         """ this method focus structue of graph, dose't concern about value of road or node 
         """        
-        graph = Graph(7)
-        for _ in range(7):
-            graph.add_node(1)
-        graph.add_biroad(0,1)
-        graph.add_biroad(0,2)
-        graph.add_biroad(1,3)
-        graph.add_biroad(1,5)
-        graph.add_biroad(0,6)
-        graph.add_biroad(2,4)
-        graph.add_biroad(2,6)
-        graph.add_biroad(3,5)
-        graph.add_biroad(4,6)
-        graph.add_biroad(6,5)
+        data = self.get_yaml_data("/Users/zhanghaopeng/CodeHub/2020Spring/DyETC/env/graph_config.yml")
+        nodes = data['nodes']
+        roads = data['roads']
+        for road in roads:
+            road['length'] = random.randint(LENGTH_INTERVAL[0], LENGTH_INTERVAL[1])
+            road['toll'] = random.randint(0, 6)
+        graph = Graph(nodes, roads)
         return graph
+    
+    def get_yaml_data(self, yaml_file):
+        file = open(yaml_file, 'r', encoding="utf-8")
+        file_data = file.read()
+        file.close()
+        data = yaml.load(file_data, Loader=yaml.Loader)
+        return data
 
 if __name__ == "__main__":
     dyenv = DynamicETC()
