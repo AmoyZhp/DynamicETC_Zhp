@@ -2,39 +2,23 @@
     <div class="col-lg-3">
         <nav class="d-none d-md-block bg-light sidebar">
             <div class="sidebar-sticky">
-                <ul class="nav flex-column accordion" id="accordionExample">
+                <ul class="nav flex-column accordion" id="leftSideBar">
                     <li class="nav-item card">
-                        <div
-                            class="card-header justify-content-between align-items-center d-flex"
-                            id="headingOne"
-                        >
-                            <h2 class="mb-0">
-                                <button
-                                    class="btn btn-link"
-                                    type="button"
-                                    data-toggle="collapse"
-                                    data-target="#collapseOne"
-                                    aria-expanded="true"
-                                    aria-controls="collapseOne"
-                                >Origin Destination</button>
-                            </h2>
+                        <div class="card-header justify-content-between align-items-center d-flex">
+                            <a
+                                data-toggle="collapse"
+                                href="#odBox"
+                                aria-expanded="true"
+                                aria-controls="odBox"
+                            >Origin Destination</a>
                             <h5>
-                                <span class="badge">{{ selectedOdDemand }}</span>
+                                <span class="badge">Demand : {{ selectedOD.demand }}</span>
                             </h5>
                         </div>
-                        <div
-                            id="collapseOne"
-                            class="collapse show"
-                            aria-labelledby="headingOne"
-                            data-parent="#accordionExample"
-                        >
+                        <div id="odBox" class="collapse show" data-parent="#leftSideBar">
                             <div class="card-body">
                                 <div class="input-group mb-3">
-                                    <input
-                                        type="text"
-                                        class="form-control"
-                                        aria-label="Dollar amount (with dot and two decimal places)"
-                                    />
+                                    <input class="form-control" v-model="originID" />
                                     <div class="input-group-append">
                                         <span class="input-group-text">
                                             <svg
@@ -58,16 +42,80 @@
                                             </svg>
                                         </span>
                                     </div>
-                                    <input
-                                        type="text"
-                                        class="form-control"
-                                        aria-label="Dollar amount (with dot and two decimal places)"
-                                    />
-                                    <div class="input-group-append" id="button-addon4">
-                                        <button class="btn btn-info" type="button" @click="findOD">Find</button>
+                                    <input class="form-control" v-model="destinationID" />
+                                    <div class="input-group-append">
+                                        <button class="btn btn-info" @click="findOD">Find</button>
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                    </li>
+                    <li class="nav-item car">
+                        <div class="card-header justify-content-between align-items-center d-flex">
+                            <a
+                                data-toggle="collapse"
+                                href="#edgeBox"
+                                aria-expanded="true"
+                                aria-controls="edgeBox"
+                            >Edge</a>
+                            <h5>
+                                <span class="badge">ID: {{ selectedEdge.id }}</span>
+                            </h5>
+                        </div>
+                        <div id="edgeBox" class="car-body collapse show" data-parent="#leftSideBar">
+                            <ul class="list-group list-group-flush">
+                                <li
+                                    class="list-group-item justify-content-between align-items-center d-flex"
+                                >
+                                    <a href="#" @click="changeEdgeDetail">Vechicels</a>
+                                    <span class="badge badge-info">{{ selectedEdge.vechicels }}</span>
+                                </li>
+                                <li
+                                    class="list-group-item sub-list-group-item"
+                                    v-if="edgesDetail && selectedEdge.detail.length > 0 "
+                                >
+                                    <ul class="list-group list-group-flush">
+                                        <li
+                                            class="list-group-item justify-content-between align-items-center d-flex"
+                                            v-for="item in selectedEdge.detail"
+                                            :key="item.id"
+                                        >
+                                            To Zone {{item.id}}
+                                            <span
+                                                class="badge badge-light"
+                                            >{{item.number}}</span>
+                                        </li>
+                                    </ul>
+                                </li>
+                                <li
+                                    class="list-group-item justify-content-between align-items-center d-flex"
+                                >
+                                    Toll
+                                    <span class="badge badge-info">{{ selectedEdge.toll }}</span>
+                                </li>
+                                <li
+                                    class="list-group-item justify-content-between align-items-center d-flex"
+                                >
+                                    Length
+                                    <span class="badge badge-info">{{ selectedEdge.length }}</span>
+                                </li>
+                                <li
+                                    class="list-group-item justify-content-between align-items-center d-flex"
+                                >
+                                    Capacity
+                                    <span
+                                        class="badge badge-info"
+                                    >{{ selectedEdge.capacity }}</span>
+                                </li>
+                                <li
+                                    class="list-group-item justify-content-between align-items-center d-flex"
+                                >
+                                    Free flow travel time
+                                    <span
+                                        class="badge badge-info"
+                                    >{{ selectedEdge.freeFlowTravelTime }}</span>
+                                </li>
+                            </ul>
                         </div>
                     </li>
                 </ul>
@@ -76,16 +124,37 @@
     </div>
 </template>
 <script>
+import { mapState, mapMutations } from "vuex";
 export default {
-    methods:{
-        findOD(){
-
+    methods: {
+        findOD() {
+            let origin = this.originID;
+            let destination = this.destinationID;
+            if (origin != null && destination != null) {
+                this.FIND_OD({
+                    origin: Number(origin),
+                    destination: Number(destination)
+                });
+            }
         },
+        changeEdgeDetail(e) {
+            if (this.edgesDetail) {
+                this.edgesDetail = false;
+            } else {
+                this.edgesDetail = true;
+            }
+        },
+        ...mapMutations(["FIND_OD"])
     },
-    data: function(){
-        return{
-            selectedOdDemand:0,
-        }
+    computed: {
+        ...mapState(["graph", "selectedEdge","selectedOD"])
+    },
+    data: function() {
+        return {
+            originID: "",
+            destinationID: "",
+            edgesDetail: false
+        };
     }
 };
 </script>
