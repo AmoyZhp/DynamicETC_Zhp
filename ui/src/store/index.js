@@ -21,7 +21,7 @@ export default new Vuex.Store({
               id,
               source,
               target,
-              vechicels,
+              vehicles,
               length,
               capacity,
               freeFlowTravelTime

@@ -107,10 +107,8 @@ export default{
     async initData(){
         let remoteData = {}
         try{
-            const response = await axios.get(
-                "https://gw.alipayobjects.com/os/basement_prod/6cae02ab-4c29-44b2-b1fd-4005688febcb.json"
-            );
-            remoteData = response.data
+            const response = await axios.get("/data.json")
+            console.log(response.data)
         } catch(error){
             console.log(error)
         }
