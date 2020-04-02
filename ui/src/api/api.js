@@ -106,9 +106,10 @@ const edges = [
 export default{
     async initData(){
         let remoteData = {}
+        let received_data = null
         try{
             const response = await axios.get("/data.json")
-            console.log(response.data)
+            received_data =  response.data
         } catch(error){
             console.log(error)
         }
@@ -145,8 +146,7 @@ export default{
         state[0][3] = 3
         state[1][2] = 2
         data.state = state
-        console.log(data)
-        return data
+        return received_data
     },
     step(){
 

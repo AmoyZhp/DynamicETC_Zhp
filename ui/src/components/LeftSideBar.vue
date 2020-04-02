@@ -50,7 +50,7 @@
                             </div>
                         </div>
                     </li>
-                    <li class="nav-item car">
+                    <li class="nav-item card">
                         <div class="card-header justify-content-between align-items-center d-flex">
                             <a
                                 data-toggle="collapse"
@@ -67,8 +67,8 @@
                                 <li
                                     class="list-group-item justify-content-between align-items-center d-flex"
                                 >
-                                    <a href="#" @click="changeEdgeDetail">Vechicels</a>
-                                    <span class="badge badge-info">{{ selectedEdge.vechicels }}</span>
+                                    <a href="#" @click="changeEdgeDetail">Vehicles</a>
+                                    <span class="badge badge-info">{{ selectedEdge.vehicles }}</span>
                                 </li>
                                 <li
                                     class="list-group-item sub-list-group-item"
@@ -118,6 +118,7 @@
                             </ul>
                         </div>
                     </li>
+                    
                 </ul>
             </div>
         </nav>

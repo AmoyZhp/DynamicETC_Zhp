@@ -30,14 +30,14 @@ export default new Vuex.Store({
           }
         */
         edgesMatrix: [], // |V| x |V|
-        dyetcState: [], // |E| x |V| 表示 边 e 上目的地是 v 的车辆的数量
+        currentState:[], // |E| x |V| 表示 边 e 上目的地是 v 的车辆的数量
+        historyStates: [], // |T| x |E| x |V| 在上述的基础上多了时间的唯独
         originDestinationPairMatrix: [], //
         /*
           originDestinationPair : {
               origin,
               destination,
-              paths,
-              contained_roads,
+              containedRoads,
               demand,
           }
         */
@@ -46,9 +46,28 @@ export default new Vuex.Store({
             nodes: [],
             edges: [],
         },
-        selectedEdge:{},
-        selectedOD: {},
+        timestep: 0,
+        selectedEdge:{
+            id: 0,
+            source: 0,
+            target: 0,
+            vechicels: 0,
+            length: 0,
+            capacity: 0,
+            freeFlowTravelTime: 0,
+            toll: 0.0,
+            label: "",
+            detail: [],
+        },
+        selectedOD: {
+            origin : 0,
+            destination: 0,
+            paths : [],
+            contained_roads: [],
+            demand: 0,
+        },
     },
+
     mutations: mutations,
     actions: actions,
     getters: getters,

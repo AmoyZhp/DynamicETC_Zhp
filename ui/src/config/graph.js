@@ -24,7 +24,13 @@ export default {
         // ...                 // 边的其他配置
         // 边样式配置
         type: "circle-running",
-
+        style:{
+            cursor: "pointer",
+            lineAppendWidth: 5, //边响应鼠标事件时的检测宽度
+            opacity: 0.6, // 边透明度
+            stroke: "#bae7ff", // 边描边颜色
+            endArrow: true, //在边的结束点画箭头
+        },
         // 边上的标签文本配置
         labelCfg: {
             autoRotate: true // 边上的标签文本根据边的方向旋转

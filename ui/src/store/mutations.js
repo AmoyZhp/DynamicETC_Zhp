@@ -1,37 +1,23 @@
 import {
     INIT_GRAPH,
     FIND_OD,
+    STEP,
+    SELECT_STATE
 } from './mutation-types.js'
 import G6 from "@antv/g6"
 import conf from "@/config/graph"
 
 export default {
-    [INIT_GRAPH] (state, { nodes, edges, dyetcState, originDestinationPairMatrix }) {
-        console.log("in")
+    [INIT_GRAPH] (state, { nodes, edges, historyStates, originDestinationPairMatrix}) {
         state.nodes = nodes
         state.edges = edges
-        state.dyetcState = dyetcState
+        state.historyStates = historyStates
+        
+        state.timestep = 0
+        state.currentState = state.historyStates[state.timestep]
         state.originDestinationPairMatrix = originDestinationPairMatrix
+        // 生成用于渲染图的数据（nodes，edge）
         state.data.nodes = []
-        state.selectedEdge = {
-            id: 0,
-            source: 0,
-            target: 0,
-            vechicels: 0,
-            length: 0,
-            capacity: 0,
-            freeFlowTravelTime: 0,
-            toll: 0.0,
-            label: "",
-            detail: [],
-        }
-        state.selectedOD = {
-            origin : 0,
-            destination: 0,
-            paths : [],
-            contained_roads: [],
-            demand: 0,
-        }
         state.edgesMatrix = new Array(state.nodes.length)
         for(let i = 0; i < state.nodes.length; i++){
             state.edgesMatrix[i] = new Array(state.nodes.length)
@@ -40,7 +26,7 @@ export default {
             let node = state.nodes[index]
             state.data.nodes.push({
                 id: 'n-'+node.id,
-                label: node.label,
+                label: ''+node.label,
             })
         }
         state.data.edges = []
@@ -51,14 +37,6 @@ export default {
                 id: 'e-' + index,
                 source: 'n-'+edge.source,
                 target: 'n-'+edge.target,
-                style: {
-                    cursor: "pointer",
-                    lineAppendWidth: 5, //边响应鼠标事件时的检测宽度
-                    opacity: 0.6, // 边透明度
-                    stroke: "#bae7ff", // 边描边颜色
-                    endArrow: true, //在边的结束点画箭头
-                    lineWidth : vechicels / 10 * 5,
-                },
             })
             state.edgesMatrix[edge.source][edge.target] = edge
         }
@@ -97,9 +75,10 @@ export default {
             console.log(cfg);
             let id = cfg.id.split("-")[1];
             state.selectedEdge = state.edges[id];
+            console.log(state.selectedEdge)
             let edgeDetail = [];
-            for (let index in state.dyetcState[id]) {
-                let num = state.dyetcState[id][index];
+            for (let index in state.currentState[id]) {
+                let num = state.currentState[id][index];
                 if (num != 0) {
                     edgeDetail.push({
                         id: index,
@@ -131,6 +110,13 @@ export default {
         let destination = payload.destination
         let {graph, originDestinationPairMatrix, 
             edgesMatrix} = state
+        const clickEdges = graph.findAllByState(
+            "edge",
+            "click"
+        );
+        clickEdges.forEach(ce => {
+            graph.setItemState(ce, "click", false);
+        });
         if ( origin >= 0 &&
             origin < originDestinationPairMatrix.length &&
             destination >= 0 &&
@@ -141,14 +127,7 @@ export default {
             ];
             if (od != null) {
                 state.selectedOD = od
-                let edgesId = od.contained_roads;
-                const clickEdges = graph.findAllByState(
-                    "edge",
-                    "click"
-                );
-                clickEdges.forEach(ce => {
-                    graph.setItemState(ce, "click", false);
-                });
+                let edgesId = od.containedRoads;
                 edgesId.forEach(e => {
                     let src = e[0];
                     let target = e[1];
@@ -166,6 +145,15 @@ export default {
                 });
             }
         }
+    },
+    [STEP](state){
+        state.timestep += 1
+        state.currentState = state.historyStates[state.timestep]
+    },
     
+    [SELECT_STATE](state, index){
+        if(index >= 0 && index < state.historyStates.length){
+            state.currentState = state.historyStates[index]
+        }
     }
 }
