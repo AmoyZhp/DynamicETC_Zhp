@@ -17,7 +17,7 @@ class Node():
         
 
 class Edge():
-    def __init__(self, id, source, target, length,
+    def __init__(self, id, source, target, length = 0,
                 vehicles = 0, toll = 0.0, label = ""):
         self.id = id
         self.source = source
@@ -38,6 +38,11 @@ class Edge():
             return False
         return True
 
+    def init_length(self,length):
+        self.length = length
+        self.capacity = self.length * 50
+        self.free_flow_travel_time = self.length * 0.5
+    
     def set_toll(self, toll):
         if toll < 0:
             logging.debug(" illegal toll number %d" %(toll))
@@ -142,9 +147,7 @@ class Graph():
         for road_dict in road_dict_list:
             source = temp_node_key_id_map[road_dict['source']]
             target = temp_node_key_id_map[road_dict['target']]
-            road = Edge(id = self.road_cnt, source=source, target=target, 
-                    length=road_dict['length'], vehicles=road_dict.get('vehicles', 0),
-                    toll=road_dict.get('toll', 0.0), label=road_dict.get('label', ""))
+            road = Edge(id = self.road_cnt, source=source, target=target)
             if (road.source < 0 or road.source >= self.node_cnt
                     or road.target < 0 or road.target >= self.node_cnt):
                 logging.debug("illegal road in init graph")
@@ -159,6 +162,10 @@ class Graph():
     def set_toll_in_road(self, source, target, toll):
        if self.legal_road(source, target):
            self.road_martix[source][target].set_toll(toll)
+    
+    def init_road_length(self,source, target, length):
+        if self.legal_road(source, target):
+            self.road_martix[source][target].init_length(length)
 
     def get_node_related_out_roads(self, node_id):
         """get road whose origin is node_id

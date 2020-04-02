@@ -1,8 +1,10 @@
 import gym
 import math
 import random
-import yaml
 from env.graph import Graph
+import logging
+logging.basicConfig(level=10,
+         format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s') 
 
 INTERVALS = 10
 CONSTANT_A = 0.15
@@ -70,8 +72,9 @@ class DynamicETC(gym.Env):
 
     Para
     """    
-    def __init__(self):
-        self.graph = self.init_graph()
+    def __init__(self, graph):
+
+        self.graph = graph
 
         self.max_timestep = MAX_TIMESTEP
         self.timestep = 0
@@ -119,12 +122,12 @@ class DynamicETC(gym.Env):
                 od = self.originDestinationMatrix[road.source][j]
                 if od != None:
                     # state transition function
-                    updated_value = - self.cal_road_out(i, j) + self.cal_road_in(i, j)
-                    self.history_state[self.timestep+1][i][j] = s_e_j  + updated_value
-                    # # new vehilces added to road
+                    road_out = self.cal_road_out(i, j)
+                    road_in = self.cal_road_in(i, j)
+                    self.history_state[self.timestep+1][i][j] = s_e_j  - road_out + road_in
+                    #  new vehilces added to road
                     self.history_state[self.timestep+1][i][j] += random.randint(8, 12) * self.tau * self.peek_rate
         self.timestep += 1
-
         if self.timestep <= 3:
             self.peek_rate += 0.1
         else:
@@ -195,8 +198,10 @@ class DynamicETC(gym.Env):
         # last num is sum of col in row e
         road = self.graph.get_road_by_id(e)
         vechicels_in_e = road.vehicles
-        result = self.state[e][destination] * self.tau / (road.free_flow_travel_time 
+        num_in_road_to_zone = self.state[e][destination]
+        result =  num_in_road_to_zone * self.tau / (road.free_flow_travel_time 
             * ( 1 + self.constant_a * (vechicels_in_e / road.capacity) ** self.constant_b ))
+        result = min(result, num_in_road_to_zone)
         return result
     
     def find_contain_road_paths(self, source, target, road):
@@ -310,6 +315,15 @@ class DynamicETC(gym.Env):
         
 
     def init_state(self, graph, max_timestep):
+        """初始化环境状态，即初始化每条路上有多少辆车，更具体的，初始化每条路上到各个目的车的数量
+        
+        Arguments:
+            graph {Graph}} -- 静态图
+            max_timestep {int} -- 有限的状态数，也是 state 在第一个维度的长度
+        
+        Returns:
+            list -- 一个 |T| x |E| x |V| 的数组。T 是 max time step，e,v 表示在路 e 上终点是 v 的汽车数量。
+        """
         history_state = []
         road_cnt = graph.get_roads_cnt()
         node_cnt = graph.get_nodes_cnt()
@@ -321,40 +335,24 @@ class DynamicETC(gym.Env):
         init_state = history_state[0]
         roads = graph.get_all_roads()
         for road in roads:
+            # 初始化每条路上的车辆的数目
+            graph.init_road_length(road.source, road.target,random.randint(LENGTH_INTERVAL[0], LENGTH_INTERVAL[1]))
             vehicles = road.capacity * random.uniform(INIT_VEHICLES_RATE[0], INIT_VEHICLES_RATE[1])
             graph.set_vechicels_in_road(road.source, road.target, vehicles)
-            # assume this is full connected graph
+            graph.set_toll_in_road(road.source, road.target, random.randint(0, 6))
+            # 将路上的车辆的目的地平均分配到经过的点
             cnt = 0
-            for i in range(len(state[road.id])):
-                if road.target != i:
+            for i in range(len(init_state[road.id])):
+                if road.source != i:
                     paths = graph.get_paths_between_two_zone(road.source, i)
                     if len(paths) != 0:
                         cnt += 1
             for i in range(len(state[road.id])):
-                if road.target != i:
+                if road.source != i:
                     paths = graph.get_paths_between_two_zone(road.source, i)
                     if len(paths) != 0:
                         init_state[road.id][i] = int(road.vehicles / cnt)
         return history_state
-
-    def init_graph(self):
-        """ this method focus structue of graph, dose't concern about value of road or node 
-        """        
-        data = self.get_yaml_data("/Users/zhanghaopeng/CodeHub/2020Spring/DyETC/env/graph_config.yml")
-        nodes = data['nodes']
-        roads = data['edges']
-        for road in roads:
-            road['length'] = random.randint(LENGTH_INTERVAL[0], LENGTH_INTERVAL[1])
-            road['toll'] = random.randint(0, 6)
-        graph = Graph(nodes, roads)
-        return graph
-    
-    def get_yaml_data(self, yaml_file):
-        file = open(yaml_file, 'r', encoding="utf-8")
-        file_data = file.read()
-        file.close()
-        data = yaml.load(file_data, Loader=yaml.Loader)
-        return data
 
 if __name__ == "__main__":
     dyenv = DynamicETC()
