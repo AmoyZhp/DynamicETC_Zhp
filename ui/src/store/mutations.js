@@ -148,10 +148,13 @@ export default {
             }
         }
     },
-    [STEP](state){
-        state.timestep += 1
-        state.currentState = state.historyStates[state.timestep]
-        state.originDestinationPairMatrix = state.originDestinationPairMatrixList[state.timestep]
+    [STEP](state, num){
+        if(state.timestep + num >= 0 && state.timestep + num < state.historyStates.length){
+            state.timestep += num
+            state.currentState = state.historyStates[state.timestep]
+            state.originDestinationPairMatrix = state.originDestinationPairMatrixList[state.timestep]
+        }
+        
     },
     
     [SELECT_STATE](state, index){

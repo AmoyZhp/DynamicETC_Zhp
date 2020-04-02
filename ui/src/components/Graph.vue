@@ -1,40 +1,27 @@
 <template>
     <div class="row">
-        <LeftSideBar />
-        <div class="col-lg-9">
-            <div id="graph"></div>
+        <div class="col">
+            <div id="graph" ></div>
         </div>
     </div>
 </template>
 <script>
 import G6 from "@antv/g6";
 import { mapState } from "vuex";
-import LeftSideBar from "@/components/LeftSideBar"
-
 export default {
-    components:{
-        LeftSideBar,
-    },
     mounted: function() {
         this.initGraph();
     },
     methods: {
         async initGraph() {
             await this.$store.dispatch("init");
-        },
+        }
     },
-    computed: {
-
-    },
+    computed: {},
     data: function() {
-        return {
-
-        };
+        return {};
     }
 };
-
-
-
 </script>
 <style scoped>
 .card {
@@ -49,6 +36,4 @@ li.list-group-item {
 li.sub-list-group-item {
     background-color: rgba(0, 206, 209, 0.1);
 }
-
-
 </style>

@@ -118,7 +118,16 @@
                             </ul>
                         </div>
                     </li>
-                    
+                    <li class="nav-item card">
+                        <router-link class="card-header" to="/stateTable">State table</router-link>
+                    </li>
+                    <li class="nav-item card">
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-secondary" @click="STEP(-1)">prev</button>
+                            <button type="button" class="btn btn-primary" >step-{{timestep}}</button>
+                            <button type="button" class="btn btn-secondary" @click="STEP(1)">next</button>
+                        </div>
+                    </li>
                 </ul>
             </div>
         </nav>
@@ -145,10 +154,10 @@ export default {
                 this.edgesDetail = true;
             }
         },
-        ...mapMutations(["FIND_OD"])
+        ...mapMutations(["FIND_OD","STEP"])
     },
     computed: {
-        ...mapState(["graph", "selectedEdge","selectedOD"])
+        ...mapState(["graph", "selectedEdge", "selectedOD","timestep"])
     },
     data: function() {
         return {
