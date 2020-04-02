@@ -77,7 +77,7 @@ class Runner():
         graph = dyenv.graph
         adjacency_list = graph.adjacency_list
         road_martix = graph.road_martix
-        originDestinationMatrix = dyenv.originDestinationMatrix
+        odm_list = dyenv.odm_list
         nodes = []
         for node in adjacency_list:
             nodes.append({
@@ -99,26 +99,30 @@ class Runner():
                         'freeFlowTravelTime': road.free_flow_travel_time,
                         'label': road.label
                     })
-        originDestinationPairs = []
-        for row in originDestinationMatrix:
-            for od in row:
-                if(od != None):
-                    contained_roads_list = []
-                    for road in od.contained_roads.values():
-                        contained_roads_list.append([road.source, road.target])
-                    originDestinationPairs.append({
-                        'origin': od.origin,
-                        'destination': od.destination,
-                        'demand' : od.demand,
-                        'containedRoads' : contained_roads_list
-                    })
+        
+        origin_destination_pairs_list = []
+        for odm_in_time in odm_list:
+            origin_destination_pairs = []
+            for row in odm_in_time:
+                for od in row:
+                    if(od != None):
+                        contained_roads_list = []
+                        for road in od.contained_roads.values():
+                            contained_roads_list.append([road.source, road.target])
+                        origin_destination_pairs.append({
+                            'origin': od.origin,
+                            'destination': od.destination,
+                            'demand' : od.demand,
+                            'containedRoads' : contained_roads_list
+                        })
+            origin_destination_pairs_list.append(origin_destination_pairs)
+            
         send_data = {
             "nodes" : nodes,
             "edges" : edges,
-            "originDestinationPairs" : originDestinationPairs,
+            "originDestinationPairsList" : origin_destination_pairs_list,
             "historyStates" : dyenv.history_state
         }
-        print( "length is %d"  % (len(dyenv.history_state)))
         with open('./ui/public/data.json', 'w') as f:
             json.dump(send_data, f, sort_keys=True, indent=4, separators=(',', ': '))
 

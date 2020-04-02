@@ -8,14 +8,16 @@ import G6 from "@antv/g6"
 import conf from "@/config/graph"
 
 export default {
-    [INIT_GRAPH] (state, { nodes, edges, historyStates, originDestinationPairMatrix}) {
+    [INIT_GRAPH] (state, { nodes, edges, historyStates, originDestinationPairMatrixList}) {
         state.nodes = nodes
         state.edges = edges
-        state.historyStates = historyStates
         
         state.timestep = 0
+        state.historyStates = historyStates
         state.currentState = state.historyStates[state.timestep]
-        state.originDestinationPairMatrix = originDestinationPairMatrix
+        state.originDestinationPairMatrixList = originDestinationPairMatrixList
+        state.originDestinationPairMatrix = state.originDestinationPairMatrixList[0]
+        console.log("od mastrix is", state.originDestinationPairMatrix)
         // 生成用于渲染图的数据（nodes，edge）
         state.data.nodes = []
         state.edgesMatrix = new Array(state.nodes.length)
@@ -61,7 +63,7 @@ export default {
             });
             const nodeItem = e.item; // 获取被点击的节点元素对象
             const cfg = nodeItem.defaultCfg;
-            console.log(cfg);
+            
             state.graph.setItemState(nodeItem, "click", true); // 设置当前节点的 click 状态为 true
         });
         state.graph.on("edge:click", e => {
@@ -72,10 +74,9 @@ export default {
             });
             const edgeItem = e.item; // 获取被点击的边元素对象
             const cfg = edgeItem.defaultCfg;
-            console.log(cfg);
             let id = cfg.id.split("-")[1];
             state.selectedEdge = state.edges[id];
-            console.log(state.selectedEdge)
+            
             let edgeDetail = [];
             for (let index in state.currentState[id]) {
                 let num = state.currentState[id][index];
@@ -110,6 +111,7 @@ export default {
         let destination = payload.destination
         let {graph, originDestinationPairMatrix, 
             edgesMatrix} = state
+        console.log("originDestinationPairMatrix is ", originDestinationPairMatrix)
         const clickEdges = graph.findAllByState(
             "edge",
             "click"
@@ -149,6 +151,7 @@ export default {
     [STEP](state){
         state.timestep += 1
         state.currentState = state.historyStates[state.timestep]
+        state.originDestinationPairMatrix = state.originDestinationPairMatrixList[state.timestep]
     },
     
     [SELECT_STATE](state, index){

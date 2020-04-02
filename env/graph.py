@@ -2,120 +2,6 @@
 import logging
 logging.basicConfig(level=10,
          format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s')      
-class Node():
-    """The node of graph
-    id : is the key value of node in dict
-    next_node : (node, next_node) is the road between two node
-    """
-    def __init__(self, id, label = ""):
-        self.id = id
-        self.next = None
-        self.label = label
-    
-    def get_copy(self):
-        return Node(self.id, self.label)
-        
-
-class Edge():
-    def __init__(self, id, source, target, length = 0,
-                vehicles = 0, toll = 0.0, label = ""):
-        self.id = id
-        self.source = source
-        self.target = target
-        self.length = length
-        self.capacity = self.length * 50
-        self.free_flow_travel_time = self.length * 0.5
-        self.vehicles = vehicles
-        self.toll = toll
-        self.label = label
-    
-    def road_legality_self_check(self):
-        if self.capacity != self.length * 50:
-            return False
-        if self.free_flow_travel_time != self.length * 0.5:
-            return False
-        if self.toll < 0:
-            return False
-        return True
-
-    def init_length(self,length):
-        self.length = length
-        self.capacity = self.length * 50
-        self.free_flow_travel_time = self.length * 0.5
-    
-    def set_toll(self, toll):
-        if toll < 0:
-            logging.debug(" illegal toll number %d" %(toll))
-        self.toll = toll
- 
-    def set_vechiceles(self, vehicles):
-        if vehicles > self.capacity or vehicles < 0:
-            logging.debug("vechicles is out of capacity now vechicles {}".format(self.vehicles) + 
-                "and new vechicles {}".format(vehicles))
-            return False
-        else:
-            self.vehicles = vehicles
-            return True
-    
-    def __str__(self):
-        s = "Road : id {}, source {} , target {}, vechicles {}".format(
-            self.id, self.source, self.target, self.vehicles)
-        s += "length {}, capacity {}, free_flow_travel_time {}, toll {}, label {} \n".format(
-            self.length, self.capacity, self.free_flow_travel_time, self.toll, self.label)
-        return s
-
-class Path():
-    def __init__(self, roads):
-        self.roads = []
-        self.origin = -1
-        self.destination = -1
-        self.length = 0
-        for road in roads:
-            self.add_road(road)
-            
-    def path_legality_self_check(self):
-        if len(self.roads) == 0:
-            return True
-
-        if self.roads[0].source != self.origin or self.roads[-1].target != self.destination:
-            return False
-
-        for i in range(len(self.roads)-1):
-            road1 = self.roads[i]
-            road2 = self.roads[i+1]
-            if road1.target != road2.source:
-                return False
-        return True
-
-    def add_road(self, road):
-        if len(self.roads) == 0:
-            self.roads.append(road)
-            self.origin = road.source
-            self.destination = road.target
-        else:
-            if self.roads[-1].target == road.source:
-                self.roads.append(road)
-                self.destination = road.target
-            else:
-                logging.debug(" added road source point don't equal to last road target point")
-        self.length = len(self.roads)
-        if not self.path_legality_self_check():
-            logging.debug("illegal path")
-            logging.debug(self.__str__)
-    
-    def is_road_in_path(self, road):
-        for r in self.roads:
-            if r.id == road.id:
-                return True
-        return False
-    
-    def __str__(self):
-        s = "Path : origin : {} , destination : {}, length {} \n".format(
-            self.origin, self.destination, self.length)
-        for road in self.roads:
-            s += " source : {}, target : {} ".format(road.source, road.target)
-        s += '\n'
-        return s
 
 class Graph():
     """Graph strcture, adjacency list are used to represent graph
@@ -295,7 +181,120 @@ class Graph():
 
     def get_roads_cnt(self):
         return self.road_cnt
+class Node():
+    """The node of graph
+    id : is the key value of node in dict
+    next_node : (node, next_node) is the road between two node
+    """
+    def __init__(self, id, label = ""):
+        self.id = id
+        self.next = None
+        self.label = label
+    
+    def get_copy(self):
+        return Node(self.id, self.label)
+        
 
+class Edge():
+    def __init__(self, id, source, target, length = 0,
+                vehicles = 0, toll = 0.0, label = ""):
+        self.id = id
+        self.source = source
+        self.target = target
+        self.length = length
+        self.capacity = self.length * 50
+        self.free_flow_travel_time = self.length * 0.5
+        self.vehicles = vehicles
+        self.toll = toll
+        self.label = label
+    
+    def road_legality_self_check(self):
+        if self.capacity != self.length * 50:
+            return False
+        if self.free_flow_travel_time != self.length * 0.5:
+            return False
+        if self.toll < 0:
+            return False
+        return True
+
+    def init_length(self,length):
+        self.length = length
+        self.capacity = self.length * 50
+        self.free_flow_travel_time = self.length * 0.5
+    
+    def set_toll(self, toll):
+        if toll < 0:
+            logging.debug(" illegal toll number %d" %(toll))
+        self.toll = toll
+ 
+    def set_vechiceles(self, vehicles):
+        if vehicles > self.capacity or vehicles < 0:
+            logging.debug("vechicles is out of capacity now vechicles {}".format(self.vehicles) + 
+                "and new vechicles {}".format(vehicles))
+            return False
+        else:
+            self.vehicles = vehicles
+            return True
+    
+    def __str__(self):
+        s = "Road : id {}, source {} , target {}, vechicles {}".format(
+            self.id, self.source, self.target, self.vehicles)
+        s += "length {}, capacity {}, free_flow_travel_time {}, toll {}, label {} \n".format(
+            self.length, self.capacity, self.free_flow_travel_time, self.toll, self.label)
+        return s
+
+class Path():
+    def __init__(self, roads):
+        self.roads = []
+        self.origin = -1
+        self.destination = -1
+        self.length = 0
+        for road in roads:
+            self.add_road(road)
+            
+    def path_legality_self_check(self):
+        if len(self.roads) == 0:
+            return True
+
+        if self.roads[0].source != self.origin or self.roads[-1].target != self.destination:
+            return False
+
+        for i in range(len(self.roads)-1):
+            road1 = self.roads[i]
+            road2 = self.roads[i+1]
+            if road1.target != road2.source:
+                return False
+        return True
+
+    def add_road(self, road):
+        if len(self.roads) == 0:
+            self.roads.append(road)
+            self.origin = road.source
+            self.destination = road.target
+        else:
+            if self.roads[-1].target == road.source:
+                self.roads.append(road)
+                self.destination = road.target
+            else:
+                logging.debug(" added road source point don't equal to last road target point")
+        self.length = len(self.roads)
+        if not self.path_legality_self_check():
+            logging.debug("illegal path")
+            logging.debug(self.__str__)
+    
+    def is_road_in_path(self, road):
+        for r in self.roads:
+            if r.id == road.id:
+                return True
+        return False
+    
+    def __str__(self):
+        s = "Path : origin : {} , destination : {}, length {} \n".format(
+            self.origin, self.destination, self.length)
+        for road in self.roads:
+            s += " source : {}, target : {} ".format(road.source, road.target)
+        s += '\n'
+        return s
 if __name__ == "__main__":
     graph = Graph(7)
     for _ in range(7):

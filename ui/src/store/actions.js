@@ -6,21 +6,23 @@ import {
 export default{
     async init({ commit }) {
         let data = await api.initData()
-        console.log(data)
-        let originDestinationPairMatrix = new Array(data.nodes.length)
-        for(let i = 0; i < originDestinationPairMatrix.length; i++){
-            originDestinationPairMatrix[i] = new Array(data.nodes.length)
-        }
-
-        console.log(originDestinationPairMatrix)
-        for(let od of data.originDestinationPairs){
-            console.log(od)
-            originDestinationPairMatrix[od.origin][od.destination] = {
-                origin : od.origin,
-                destination : od.destination,
-                containedRoads : od.containedRoads,
-                demand : od.demand,
+        console.log("received env data is : ",data)
+        
+        let originDestinationPairMatrixList = []
+        for(let row of data.originDestinationPairsList){
+            let originDestinationPairMatrix = new Array(data.nodes.length)
+            for(let i = 0; i < originDestinationPairMatrix.length; i++){
+                originDestinationPairMatrix[i] = new Array(data.nodes.length)
             }
+            for(let od of row){
+                originDestinationPairMatrix[od.origin][od.destination] = {
+                    origin : od.origin,
+                    destination : od.destination,
+                    containedRoads : od.containedRoads,
+                    demand : od.demand,
+                }
+            }
+            originDestinationPairMatrixList.push(originDestinationPairMatrix)
         }
         
         commit({
@@ -28,7 +30,7 @@ export default{
             nodes: data.nodes,
             edges: data.edges,
             historyStates: data.historyStates,
-            originDestinationPairMatrix: originDestinationPairMatrix,
+            originDestinationPairMatrixList: originDestinationPairMatrixList,
         })
     },
 
