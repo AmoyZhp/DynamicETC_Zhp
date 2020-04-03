@@ -122,6 +122,9 @@
                         <router-link class="card-header" to="/stateTable">State table</router-link>
                     </li>
                     <li class="nav-item card">
+                        <router-link class="card-header" to="/originDestinationTable">Origin Destination table</router-link>
+                    </li>
+                    <li class="nav-item card">
                         <div class="btn-group">
                             <button type="button" class="btn btn-secondary" @click="STEP(-1)">prev</button>
                             <button type="button" class="btn btn-primary" >step-{{timestep}}</button>

@@ -3,6 +3,7 @@ import VueRouter from 'vue-router'
 import DyETC from '@/views/DyETC.vue'
 import Graph from '@/components/Graph.vue'
 import StateTable from '@/components/StateTable.vue'
+import OriginDestinationTable from '@/components/OriginDestinationTable.vue'
 
 Vue.use(VueRouter)
 
@@ -23,6 +24,11 @@ const routes = [
             name: 'stateTable',
             component: StateTable
         },
+        {
+            path: '/originDestinationTable',
+            name: 'originDestinationTable',
+            component: OriginDestinationTable
+        }
     ]
 },
 ]

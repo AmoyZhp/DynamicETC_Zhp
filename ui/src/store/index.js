@@ -32,6 +32,7 @@ export default new Vuex.Store({
         edgesMatrix: [], // |V| x |V|
         currentState:[], // |E| x |V| 表示 边 e 上目的地是 v 的车辆的数量
         historyStates: [], // |T| x |E| x |V| 在上述的基础上多了时间的唯独
+        originDestinationPairMatrixList: [],
         originDestinationPairMatrix: [], //
         /*
           originDestinationPair : {

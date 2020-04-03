@@ -11,7 +11,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="(row, index) in currentState" :key="index" scope="col">
+                            <tr v-for="(row, index) in currentState" :key="index">
                                 <th scope="row">{{edges[index].source}} -> {{edges[index].target}}</th>
                                 <td v-for="(num, index) in row" :key="index">{{num}}</td>
                             </tr>
