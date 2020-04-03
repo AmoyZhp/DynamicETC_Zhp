@@ -8,9 +8,9 @@ class Graph():
         its a static graph.It means that once finish created this graph
         you should not edit this graph.
     """    
-    def __init__(self, node_dict_list, road_dict_list):
+    def __init__(self, node_dict_list, edge_dict_list):
         self.adjacency_list = []
-        self.road_martix = []
+        self.edges_martix = []
 
         temp_node_key_id_map = {}
         for node_dict in node_dict_list:
@@ -30,9 +30,9 @@ class Graph():
             self.road_martix.append(row)
 
         self.road_cnt = 0
-        for road_dict in road_dict_list:
-            source = temp_node_key_id_map[road_dict['source']]
-            target = temp_node_key_id_map[road_dict['target']]
+        for edge_dict in edge_dict_list:
+            source = temp_node_key_id_map[edge_dict['source']]
+            target = temp_node_key_id_map[edge_dict['target']]
             road = Edge(id = self.road_cnt, source=source, target=target)
             if (road.source < 0 or road.source >= self.node_cnt
                     or road.target < 0 or road.target >= self.node_cnt):
@@ -295,6 +295,7 @@ class Path():
             s += " source : {}, target : {} ".format(road.source, road.target)
         s += '\n'
         return s
+
 if __name__ == "__main__":
     graph = Graph(7)
     for _ in range(7):

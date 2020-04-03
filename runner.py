@@ -1,11 +1,12 @@
 from env.dynamic_etc import DynamicETC
 from agent.default_agent import DefaultAgent 
-from env.graph import Graph
+from env.traffic_graph import TrafficGraph
 import yaml
 import json
 import random
 
 GRAPH_CONFIG_PATH = "/Users/zhanghaopeng/CodeHub/2020Spring/DyETC/env/config/"
+
 class Runner():
     def __init__(self):
         super().__init__()
@@ -17,25 +18,38 @@ class Runner():
         graph = self.init_graph(filename)
         dyenv = DynamicETC(graph)
         action_space = dyenv.action_space
-        agents = {}
-        # each road has an agent to adjust toll
-        for i in range(action_space[2]) :
-            agents[i] = DefaultAgent()
-        cnt = 0
+        agents = self.init_agents(graph)
         state = dyenv.reset()
         while True:
             actions = {}
-            # get union action
+            # 获取联合行动
             for key, agent in agents.items():
-                obs = self.process_state_to_obs(state, i)
+                obs = self.process_state_to_obs(state, key)
                 act = agent.act(obs)
                 actions[key] = act
             next_state, reward, terminal, info = dyenv.step(actions)
             if terminal:
                 break
             state = next_state
-        self.toJsonFile(dyenv)
+        # self.toJsonFile(dyenv)
+    
+    def init_agents(self, graph:TrafficGraph):
+        agents = {}
+        roads = graph.get_all_roads()
+        for road in roads:
+            agent = DefaultAgent(road.edge_id, road.source, road.target)
+            agents[road.edge_id] = agent
+        return agents
 
+    def init_graph(self,filename):
+        """ 初始化的图只有边和节点的信息，具体的 车辆等信息 在 dyetc env 在完成初始化 
+        """
+        data = self.get_yaml_data(GRAPH_CONFIG_PATH + filename)
+        nodes = data['nodes']
+        roads = data['edges']
+        graph = TrafficGraph(nodes, roads)
+        return graph
+        
     def generate_graph(self,node_cnt):
         """ this method focus structue of graph, dose't concern about value of road or node 
         """
@@ -56,15 +70,6 @@ class Runner():
         filename = "graph-" + str(node_cnt) + ".yml"
         with open(GRAPH_CONFIG_PATH+filename, "w", encoding="utf-8") as f:
             yaml.dump(data, f)
-    
-    def init_graph(self,filename):
-        """ this method focus structue of graph, dose't concern about value of road or node 
-        """
-        data = self.get_yaml_data(GRAPH_CONFIG_PATH + filename)
-        nodes = data['nodes']
-        roads = data['edges']
-        graph = Graph(nodes, roads)
-        return graph
 
     def get_yaml_data(self, yaml_file):
         file = open(yaml_file, 'r', encoding="utf-8")
@@ -81,15 +86,15 @@ class Runner():
         nodes = []
         for node in adjacency_list:
             nodes.append({
-                'id': node.id,
-                'label': node.id,
+                'id': node.node_id,
+                'label': node.node_id,
             })
         edges = []
         for row in road_martix:
             for road in row:
                 if(road != None):
                     edges.append({
-                        "id": road.id,
+                        "id": road.edge_id,
                         'source': road.source,
                         'target': road.target,
                         'vehicles': road.vehicles,
