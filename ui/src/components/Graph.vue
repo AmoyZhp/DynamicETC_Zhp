@@ -14,26 +14,14 @@ export default {
     },
     methods: {
         async initGraph() {
-            await this.$store.dispatch("init");
+            await this.$store.dispatch("init", "graph");
         }
     },
-    computed: {},
+    computed: {
+        ...mapState(['graph'])
+    },
     data: function() {
         return {};
     }
 };
 </script>
-<style scoped>
-.card {
-    background-color: rgba(0, 0, 128, 0.1);
-}
-.card-header {
-    background-color: rgba(0, 0, 128, 0.1);
-}
-li.list-group-item {
-    background-color: rgba(176, 224, 230, 0.1);
-}
-li.sub-list-group-item {
-    background-color: rgba(0, 206, 209, 0.1);
-}
-</style>

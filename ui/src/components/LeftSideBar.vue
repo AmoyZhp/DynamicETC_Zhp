@@ -122,13 +122,24 @@
                         <router-link class="card-header" to="/stateTable">State table</router-link>
                     </li>
                     <li class="nav-item card">
-                        <router-link class="card-header" to="/originDestinationTable">Origin Destination table</router-link>
+                        <router-link
+                            class="card-header"
+                            to="/originDestinationTable"
+                        >Origin Destination table</router-link>
                     </li>
                     <li class="nav-item card">
                         <div class="btn-group">
-                            <button type="button" class="btn btn-secondary" @click="STEP(-1)">prev</button>
-                            <button type="button" class="btn btn-primary" >step-{{timestep}}</button>
-                            <button type="button" class="btn btn-secondary" @click="STEP(1)">next</button>
+                            <button
+                                type="button"
+                                class="btn btn-secondary"
+                                @click="UPDATE_TIME_STEP(timestep-1)"
+                            >prev</button>
+                            <button type="button" class="btn btn-primary">step-{{timestep}}</button>
+                            <button
+                                type="button"
+                                class="btn btn-secondary"
+                                @click="UPDATE_TIME_STEP(timestep+1)"
+                            >next</button>
                         </div>
                     </li>
                 </ul>
@@ -144,10 +155,33 @@ export default {
             let origin = this.originID;
             let destination = this.destinationID;
             if (origin != null && destination != null) {
-                this.FIND_OD({
-                    origin: Number(origin),
-                    destination: Number(destination)
+                const clickEdges = this.graph.findAllByState("edge", "click");
+                clickEdges.forEach(ce => {
+                    this.graph.setItemState(ce, "click", false);
                 });
+                origin = Number(origin)
+                destination = Number(destination)
+                if (
+                    origin >= 0 &&
+                    origin < this.originDestPairMatrix.length &&
+                    destination >= 0 &&
+                    destination < this.originDestPairMatrix.length
+                ) {
+                    let od = this.originDestPairMatrix[origin][destination];
+                    if (od != null) {
+                        this.selectedOD = od;
+                        let edgesId = od.containedRoads;
+                        edgesId.forEach(e => {
+                            let src = e[0];
+                            let target = e[1];
+                            let edge = this.roadsMatrix[src][target];
+                            if (edge != null) {
+                                let edgeItem = this.graph.findById("e-" + edge.id);
+                                this.graph.setItemState(edgeItem, "click", true);
+                            }
+                        });
+                    }
+                }
             }
         },
         changeEdgeDetail(e) {
@@ -157,16 +191,30 @@ export default {
                 this.edgesDetail = true;
             }
         },
-        ...mapMutations(["FIND_OD","STEP"])
+        ...mapMutations(["UPDATE_TIME_STEP"])
     },
     computed: {
-        ...mapState(["graph", "selectedEdge", "selectedOD","timestep"])
+        ...mapState([
+            "graph",
+            "selectedEdge",
+            "timestep",
+            "originDestPairMatrix",
+            "roadsMatrix"
+        ])
     },
     data: function() {
         return {
             originID: "",
             destinationID: "",
-            edgesDetail: false
+            edgesDetail: false,
+            selectedOD: {
+                origin : 0,
+                destination: 0,
+                paths : [],
+                contained_roads: [],
+                demand: 0,
+            },
+
         };
     }
 };

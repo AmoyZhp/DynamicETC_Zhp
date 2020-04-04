@@ -31,7 +31,7 @@ class Runner():
             if terminal:
                 break
             state = next_state
-        # self.toJsonFile(dyenv)
+        self.toJsonFile(dyenv)
     
     def init_agents(self, graph:TrafficGraph):
         agents = {}
@@ -78,55 +78,59 @@ class Runner():
         data = yaml.load(file_data, Loader=yaml.Loader)
         return data
 
-    def toJsonFile(self, dyenv):
-        graph = dyenv.graph
-        adjacency_list = graph.adjacency_list
-        road_martix = graph.road_martix
-        odm_list = dyenv.odm_list
-        nodes = []
-        for node in adjacency_list:
-            nodes.append({
-                'id': node.node_id,
-                'label': node.node_id,
-            })
-        edges = []
-        for row in road_martix:
-            for road in row:
-                if(road != None):
-                    edges.append({
-                        "id": road.edge_id,
-                        'source': road.source,
-                        'target': road.target,
-                        'vehicles': road.vehicles,
-                        'toll': road.toll,
-                        'length': road.length,
-                        'capacity': road.capacity,
-                        'freeFlowTravelTime': road.free_flow_travel_time,
-                        'label': road.label
-                    })
+    def toJsonFile(self, dyenv: DynamicETC):
+        memory = dyenv.memory
+
+        trajectory = []
+        for state in memory:
+            # state 是一个 Dynamic ETC State 类
+            graph = state.traffic_graph
+            odp_list = state.origin_dest_pair_list
+            zones_list = graph.get_all_nodes()
+            road_list = graph.get_all_roads()
+
+            zones = []
+            for zone in zones_list:
+                zones.append({
+                    'id': zone.node_id,
+                    'label': zone.node_id,
+                })
+
+            roads = []
+            for road in road_list:
+                roads.append({
+                    "id": road.edge_id,
+                    'source': road.source,
+                    'target': road.target,
+                    'vehicles': road.vehicles,
+                    'toll': road.toll,
+                    'length': road.length,
+                    'capacity': road.capacity,
+                    'freeFlowTravelTime': road.free_flow_travel_time,
+                    'label': road.label
+                })
         
-        origin_destination_pairs_list = []
-        for odm_in_time in odm_list:
             origin_destination_pairs = []
-            for row in odm_in_time:
-                for od in row:
-                    if(od != None):
-                        contained_roads_list = []
-                        for road in od.contained_roads.values():
-                            contained_roads_list.append([road.source, road.target])
-                        origin_destination_pairs.append({
-                            'origin': od.origin,
-                            'destination': od.destination,
-                            'demand' : od.demand,
-                            'containedRoads' : contained_roads_list
-                        })
-            origin_destination_pairs_list.append(origin_destination_pairs)
+            for od in odp_list:
+                if(od != None):
+                    contained_roads_list = []
+                    for road in od.contained_roads.values():
+                        contained_roads_list.append([road.source, road.target])
+                    origin_destination_pairs.append({
+                        'origin': od.origin,
+                        'destination': od.destination,
+                        'demand' : od.demand,
+                        'containedRoads' : contained_roads_list
+                    })
+            trajectory.append({
+                "zones": zones,
+                "roads": roads,
+                "trafficState": state.traffic_state,
+                "originDestPairs": origin_destination_pairs,
+            })
             
         send_data = {
-            "nodes" : nodes,
-            "edges" : edges,
-            "originDestinationPairsList" : origin_destination_pairs_list,
-            "historyStates" : dyenv.history_state
+            "trajectory" : trajectory
         }
         with open('./ui/public/data.json', 'w') as f:
             json.dump(send_data, f, sort_keys=True, indent=4, separators=(',', ': '))

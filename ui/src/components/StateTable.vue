@@ -7,12 +7,12 @@
                         <thead>
                             <tr>
                                 <th scope="col">timestep : {{timestep}}</th>
-                                <th v-for="node in nodes" :key="node.id" scope="col">n-{{node.id}}</th>
+                                <th v-for="zone in zones" :key="zone.id" scope="col">n-{{zone.id}}</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr v-for="(row, index) in currentState" :key="index">
-                                <th scope="row">{{edges[index].source}} -> {{edges[index].target}}</th>
+                                <th scope="row">{{roads[index].source}} -> {{roads[index].target}}</th>
                                 <td v-for="(num, index) in row" :key="index">{{num}}</td>
                             </tr>
                         </tbody>
@@ -28,7 +28,7 @@
                                     <span aria-hidden="true">&laquo;</span>
                                 </a>
                             </li>
-                            <li v-for="(row, index) in historyStates" :key="index" class="page-item" v-bind:class="{ active: index == timestep }">
+                            <li v-for="(row, index) in trafficStateHisotry" :key="index" class="page-item" v-bind:class="{ active: index == timestep }">
                                 <a
                                     class="page-link"
                                     href="#"
@@ -51,23 +51,28 @@
     </div>
 </template>
 <script>
-import { mapState, mapMutations } from "vuex";
+import { mapState, mapMutations, mapGetters } from "vuex";
 
 export default {
     mounted: function(){
-      this.currentState = this.historyStates[0]  
+      this.currentState = this.trafficStateHisotry[this.timestep]
     },
     methods: {
         selectState(index){
-            if(index >= 0 && index < this.historyStates.length){
+            if(index >= 0 && index < this.trafficStateHisotry.length){
                 this.timestep = index
-                this.currentState = this.historyStates[index]
+                this.currentState = this.trafficStateHisotry[index]
             }
         },
         ...mapMutations(["SELECT_STATE"])
     },
     computed: {
-        ...mapState(["nodes", "edges", "historyStates"])
+        ...mapGetters([
+            "trafficStateHisotry"
+            // ...
+        ]),
+
+        ...mapState(["zones", "roads",])
     },
     data: function(){
         return{

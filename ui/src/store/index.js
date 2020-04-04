@@ -9,15 +9,16 @@ Vue.use(Vuex)
 export default new Vuex.Store({
     state: {
         graph:{},
-        nodes: [], // 节点的实例对象，接收到后台数据后的实例化对象
-        /* node : {
+        trajectory: [], // 存储每个时间步上的 state
+        zones: [], // 节点的实例对象，接收到后台数据后的实例化对象
+        /* zone : {
               id,
               label,
           }
         */
-        edges: [], // 边的实例化对象，接收到后台数据后的实例化对象
+        roads: [], // 边的实例化对象，接收到后台数据后的实例化对象
         /*
-          edge: {
+          road: {
               id,
               source,
               target,
@@ -29,11 +30,9 @@ export default new Vuex.Store({
               label,
           }
         */
-        edgesMatrix: [], // |V| x |V|
-        currentState:[], // |E| x |V| 表示 边 e 上目的地是 v 的车辆的数量
-        historyStates: [], // |T| x |E| x |V| 在上述的基础上多了时间的唯独
-        originDestinationPairMatrixList: [],
-        originDestinationPairMatrix: [], //
+        roadsMatrix: [], // |V| x |V|
+        trafficState:[], // |E| x |V| 表示 边 e 上目的地是 v 的车辆的数量
+        originDestPairMatrix: [], //
         /*
           originDestinationPair : {
               origin,
@@ -42,7 +41,7 @@ export default new Vuex.Store({
               demand,
           }
         */
-        data: {
+        renderData: {
             // 基于 state 的数据生成的用于渲染的数据
             nodes: [],
             edges: [],
@@ -59,13 +58,6 @@ export default new Vuex.Store({
             toll: 0.0,
             label: "",
             detail: [],
-        },
-        selectedOD: {
-            origin : 0,
-            destination: 0,
-            paths : [],
-            contained_roads: [],
-            demand: 0,
         },
     },
 

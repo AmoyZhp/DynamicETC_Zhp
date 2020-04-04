@@ -155,4 +155,4 @@ class Edge():
         self.source = source
         self.target = target
         self.edge_id = edge_id
-        self.lable = label
+        self.label = label

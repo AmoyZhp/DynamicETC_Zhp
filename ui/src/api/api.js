@@ -105,48 +105,14 @@ const edges = [
 
 export default{
     async initData(){
-        let remoteData = {}
-        let received_data = null
+        let remoteData = null
         try{
             const response = await axios.get("/data.json")
-            received_data =  response.data
+            remoteData =  response.data
         } catch(error){
             console.log(error)
         }
-        let data = {
-            nodes: nodes,
-            edges: edges,
-        }
-        data.originDestinationPairMatrix = new Array(data.nodes.length)
-        for(let i = 0 ; i < data.originDestinationPairMatrix.length; i += 1){
-            data.originDestinationPairMatrix[i] = new Array(data.nodes.length)
-        }
-        data.originDestinationPairMatrix[0][3] = {
-            origin: 0,
-            destination: 3,
-            demand: 2,
-            contained_roads:[ [0,3],[0,1],[1,3] ],
-        }
-        data.originDestinationPairMatrix[0][2] = {
-            origin: 0,
-            destination: 2,
-            demand: 12,
-            contained_roads:[ [0,3],[0,1],[1,3],[0,2],[3,2] ],
-        } 
-        let state = new Array(data.edges.length)
-        for(let i = 0 ; i < state.length; i += 1){
-            state[i] = new Array(data.nodes.length)
-            for(let j = 0 ; j < state[i].length; j += 1){
-                state[i][j] = 0
-            }
-        }
-        console.log(state)
-        state[0][1] = 1
-        state[0][2] = 2
-        state[0][3] = 3
-        state[1][2] = 2
-        data.state = state
-        return received_data
+        return remoteData
     },
     step(){
 

@@ -1,49 +1,77 @@
 import {
     INIT_GRAPH,
-    FIND_OD,
-    STEP,
-    SELECT_STATE
+    UPDATE_TIME_STEP,
+    INIT_STATE,
 } from './mutation-types.js'
 import G6 from "@antv/g6"
 import conf from "@/config/graph"
 
 export default {
-    [INIT_GRAPH] (state, { nodes, edges, historyStates, originDestinationPairMatrixList}) {
-        state.nodes = nodes
-        state.edges = edges
-        
+
+    [INIT_STATE](state, payload) {
         state.timestep = 0
-        state.historyStates = historyStates
-        state.currentState = state.historyStates[state.timestep]
-        state.originDestinationPairMatrixList = originDestinationPairMatrixList
-        state.originDestinationPairMatrix = state.originDestinationPairMatrixList[0]
-        console.log("od mastrix is", state.originDestinationPairMatrix)
-        // 生成用于渲染图的数据（nodes，edge）
-        state.data.nodes = []
-        state.edgesMatrix = new Array(state.nodes.length)
-        for(let i = 0; i < state.nodes.length; i++){
-            state.edgesMatrix[i] = new Array(state.nodes.length)
-        }
-        for (let index in state.nodes) {
-            let node = state.nodes[index]
-            state.data.nodes.push({
-                id: 'n-'+node.id,
-                label: ''+node.label,
+        let trajectory = payload.trajectory
+        for (let dyetcState of trajectory) {
+            let trafficState = dyetcState.trafficState
+            let zones = []
+            for (let zone of dyetcState.zones) {
+                zones.push({
+                    id: zone.id,
+                    label: zone.label
+                })
+            }
+            let roads = []
+            for (let road of dyetcState.roads) {
+                roads.push({
+                    id: road.id,
+                    source: road.source,
+                    target: road.target,
+                    vehicles: road.vehicles,
+                    toll: road.toll,
+                    length: road.length,
+                    capacity: road.capacity,
+                    freeFlowTravelTime: road.freeFlowTravelTime,
+                    label: road.label
+                })
+            }
+
+            // 把 road list 还原成 road matrix
+            let roadsMatrix = new Array(zones.length)
+            for (let i = 0; i < roadsMatrix.length; i++) {
+                roadsMatrix[i] = new Array(zones.length)
+            }
+            for (let road of roads) {
+                roadsMatrix[road.source][road.target] = road
+            }
+            // 把 od list 还原成 od matrix
+            let originDestPairMatrix = new Array(zones.length)
+            for (let i = 0; i < originDestPairMatrix.length; i++) {
+                originDestPairMatrix[i] = new Array(zones.length)
+            }
+
+            for (let od of dyetcState.originDestPairs) {
+                originDestPairMatrix[od.origin][od.destination] = {
+                    origin: od.origin,
+                    destination: od.destination,
+                    containedRoads: od.containedRoads,
+                    demand: od.demand,
+                }
+            }
+            // 把 od matrix  road matrix , zones 和 roads 押入 轨迹中
+            state.trajectory.push({
+                zones: zones,
+                roads: roads,
+                trafficState: trafficState,
+                roadsMatrix: roadsMatrix,
+                originDestPairMatrix: originDestPairMatrix,
             })
         }
-        state.data.edges = []
-        for (let index in state.edges) {
-            let edge = state.edges[index]
-            let vechicels = edge.vechicels
-            state.data.edges.push({
-                id: 'e-' + index,
-                source: 'n-'+edge.source,
-                target: 'n-'+edge.target,
-            })
-            state.edgesMatrix[edge.source][edge.target] = edge
-        }
+        console.log(state.trajectory)
+    },
+
+    [INIT_GRAPH](state, containerName) {
         state.graph = new G6.Graph({
-            container: "graph", // String | HTMLElement，必须，创建的容器 id 或容器本身
+            container: containerName, // String | HTMLElement，必须，创建的容器 id 或容器本身
             width: conf.width, // Number，必须，图的宽度
             height: conf.height, // Number，必须，图的高度
             layout: conf.layout,
@@ -53,8 +81,6 @@ export default {
             nodeStateStyles: conf.nodeStateStyles,
             edgeStateStyles: conf.edgeStateStyles
         });
-        state.graph.data(state.data); // 读取数据到图源上
-        state.graph.render(); // 渲染图
         state.graph.on("node:click", e => {
             // 先将所有当前是 click 状态的节点置为非 click 状态
             const clickNodes = state.graph.findAllByState("node", "click");
@@ -62,8 +88,6 @@ export default {
                 state.graph.setItemState(cn, "click", false);
             });
             const nodeItem = e.item; // 获取被点击的节点元素对象
-            const cfg = nodeItem.defaultCfg;
-            
             state.graph.setItemState(nodeItem, "click", true); // 设置当前节点的 click 状态为 true
         });
         state.graph.on("edge:click", e => {
@@ -75,11 +99,11 @@ export default {
             const edgeItem = e.item; // 获取被点击的边元素对象
             const cfg = edgeItem.defaultCfg;
             let id = cfg.id.split("-")[1];
-            state.selectedEdge = state.edges[id];
-            
+            console.log(id)
+            state.selectedEdge = state.roads[id];
             let edgeDetail = [];
-            for (let index in state.currentState[id]) {
-                let num = state.currentState[id][index];
+            for (let index in state.trafficState[id]) {
+                let num = state.trafficState[id][index];
                 if (num != 0) {
                     edgeDetail.push({
                         id: index,
@@ -106,60 +130,53 @@ export default {
             state.graph.setItemState(node, "hover", false);
         });
     },
-    [FIND_OD](state, payload){
-        let origin = payload.origin
-        let destination = payload.destination
-        let {graph, originDestinationPairMatrix, 
-            edgesMatrix} = state
-        console.log("originDestinationPairMatrix is ", originDestinationPairMatrix)
-        const clickEdges = graph.findAllByState(
-            "edge",
-            "click"
-        );
-        clickEdges.forEach(ce => {
-            graph.setItemState(ce, "click", false);
-        });
-        if ( origin >= 0 &&
-            origin < originDestinationPairMatrix.length &&
-            destination >= 0 &&
-            destination < originDestinationPairMatrix.length
-        ) {
-            let od = originDestinationPairMatrix[origin][
-                destination
-            ];
-            if (od != null) {
-                state.selectedOD = od
-                let edgesId = od.containedRoads;
-                edgesId.forEach(e => {
-                    let src = e[0];
-                    let target = e[1];
-                    let edge = edgesMatrix[src][target];
-                    if (edge != null) {
-                        let edgeItem = graph.findById(
-                            "e-" + edge.id
-                        );
-                        graph.setItemState(
-                            edgeItem,
-                            "click",
-                            true
-                        );
-                    }
-                });
+
+    [UPDATE_TIME_STEP] (state, timestep){
+        /**
+         * 当前的所有状态会根据 timestep 的变换而变化
+         */
+        if (timestep >= 0 && timestep < state.trajectory.length) {
+            state.timestep = timestep
+            state.zones = state.trajectory[state.timestep].zones
+            state.roads = state.trajectory[state.timestep].roads
+            state.trafficState = state.trajectory[state.timestep].trafficState
+            state.roadsMatrix = state.trajectory[state.timestep].roadsMatrix
+            state.originDestPairMatrix = state.trajectory[state.timestep].originDestPairMatrix
+            // 生成用于渲染图的数据（nodes，edge）
+            state.renderData.nodes = []
+            for (let zone of state.zones) {
+                state.renderData.nodes.push({
+                    id: 'n-' + zone.id,
+                    label: '' + zone.label,
+                })
             }
+            state.renderData.edges = []
+            for (let road of state.roads) {
+                let vehicles = road.vehicles
+                let lineWidth = (vehicles / 500) * 5
+                if( lineWidth < 1 ){
+                    lineWidth = 1
+                }
+                if( lineWidth > 5 ){
+                    lineWidth = 5
+                }
+                state.renderData.edges.push({
+                    id: 'e-' + road.id,
+                    source: 'n-' + road.source,
+                    target: 'n-' + road.target,
+                    style:{
+                        cursor: "pointer",
+                        lineAppendWidth: 5, //边响应鼠标事件时的检测宽度
+                        opacity: 0.6, // 边透明度
+                        stroke: "#bae7ff", // 边描边颜色
+                        endArrow: true, //在边的结束点画箭头
+                        lineWidth: lineWidth
+                    },
+                })
+            }
+            state.graph.data(state.renderData); // 读取数据到图源上
+            state.graph.render(); // 渲染图
         }
     },
-    [STEP](state, num){
-        if(state.timestep + num >= 0 && state.timestep + num < state.historyStates.length){
-            state.timestep += num
-            state.currentState = state.historyStates[state.timestep]
-            state.originDestinationPairMatrix = state.originDestinationPairMatrixList[state.timestep]
-        }
-        
-    },
-    
-    [SELECT_STATE](state, index){
-        if(index >= 0 && index < state.historyStates.length){
-            state.currentState = state.historyStates[index]
-        }
-    }
+
 }

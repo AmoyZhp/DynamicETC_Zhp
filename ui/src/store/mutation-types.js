@@ -1,4 +1,5 @@
 export const INIT_GRAPH = 'INIT_GRAPH'
 export const FIND_OD = 'FIND_OD'
-export const STEP = 'STEP'
-export const SELECT_STATE = 'SELECT_STATE'
+export const INIT_STATE = 'INIT_STATE'
+export const UPDATE_TIME_STEP = 'UPDATE_TIME_STEP'
+export const RENDER_GRAPH = 'RENDER_GRAPH'
