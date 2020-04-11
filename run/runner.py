@@ -1,6 +1,7 @@
 from env.dynamic_etc import DynamicETC
 from agent.default_agent import DefaultAgent 
 from env.traffic_graph import TrafficGraph
+from env.dyetc_state import DyETCState
 import yaml
 import json
 import random
@@ -14,12 +15,18 @@ class Runner():
     def process_state_to_obs(self, state, i):
         return []
 
-    def run(self,filename):
+    def run(self,filename, init_state_from_file=False):
         graph = self.init_graph(filename)
-        dyenv = DynamicETC(graph)
+        init_state = None
+        init_state_data_filename = GRAPH_CONFIG_PATH + filename + '-init_state.data'
+        if init_state_from_file:
+            init_state = self.read_init_state_from_file(init_state_data_filename)
+        dyenv = DynamicETC(graph, init_state)
         action_space = dyenv.action_space
         agents = self.init_agents(graph)
         state = dyenv.reset()
+        if init_state_from_file == False:
+            self.write_state_to_file(state, init_state_data_filename)
         while True:
             actions = {}
             # 获取联合行动
@@ -44,7 +51,7 @@ class Runner():
     def init_graph(self,filename):
         """ 初始化的图只有边和节点的信息，具体的 车辆等信息 在 dyetc env 在完成初始化 
         """
-        data = self.get_yaml_data(GRAPH_CONFIG_PATH + filename)
+        data = self.get_yaml_data(GRAPH_CONFIG_PATH + filename + '.yml')
         nodes = data['nodes']
         roads = data['edges']
         graph = TrafficGraph(nodes, roads)
@@ -68,7 +75,7 @@ class Runner():
             "edges" : edges,
         }
         filename = "graph-" + str(node_cnt) + ".yml"
-        with open(GRAPH_CONFIG_PATH+filename, "w", encoding="utf-8") as f:
+        with open(GRAPH_CONFIG_PATH+filename + '.yml', "w", encoding="utf-8") as f:
             yaml.dump(data, f)
 
     def get_yaml_data(self, yaml_file):
@@ -134,5 +141,29 @@ class Runner():
         }
         with open('./ui/public/data.json', 'w') as f:
             json.dump(send_data, f, sort_keys=True, indent=4, separators=(',', ': '))
+    
+    def write_state_to_file(self, state:DyETCState, filename):
+        data = {'state': state.traffic_state}
+        graph = state.traffic_graph
+        roads = graph.get_all_roads()
+        roads_data = []
+        for road in roads:
+            roads_data.append({
+                'source': road.source,
+                'target': road.target,
+                'length': road.length,
+                'capacity': road.capacity,
+                'free_flow_travel_time': road.free_flow_travel_time,
+                'vehicles': road.vehicles,
+                'road' : road.toll,
+            })
+        data['roads'] = roads_data
+        with open(filename, 'w') as f:
+            f.write(json.dumps(data))
 
+    def read_init_state_from_file(self, filename):
+        with open(filename, 'r') as f:
+            data = json.loads(f.read())
+            state = data['state']
+            return state
         

@@ -28,34 +28,33 @@ class TrafficGraph(StaticGraph):
             return []
         if origin_node_id == dest_node_id:
             return []
-        
         paths = []
-        stack = []
-        vis =  [[ False for _ in range(self.get_nodes_cnt())] for _ in range(self.get_nodes_cnt()) ]
-        origin_node = self.nodes_adjacency_list[origin_node_id]
-        stack.append(origin_node)
+        nodes = []
         # DFS
-        while len(stack) > 0:
-            node = stack[-1]
-            if node.node_id == dest_node_id:
-                roads = []
-                for i in range(len(stack)-1):
-                    road = self.get_road(stack[i].node_id, stack[i+1].node_id)
-                    roads.append(road)
-                paths.append(Path(origin=origin_node_id, 
-                        destination=dest_node_id, roads=roads))
-                stack.pop()
-                continue
+        self.__dfs_paths_finding(origin_node_id, dest_node_id, nodes, paths)
+        return paths
+
+    def __dfs_paths_finding(self, origin_node_id, dest_node_id, nodes, paths):
+        # 如果节点已经在列表中，表示访问到了一个环
+        if nodes.count(origin_node_id) > 0:
+            return
+        nodes.append(origin_node_id)
+        node = self.nodes_adjacency_list[origin_node_id]
+        if origin_node_id == dest_node_id:
+            roads = []
+            for i in range(len(nodes)-1):
+                road = self.get_road(nodes[i], nodes[i+1])
+                roads.append(road)
+            paths.append(Path(origin=roads[0].source, 
+                        destination=roads[-1].target, roads=roads))
+        else:
             neighbor = node.next
             while neighbor != None:
-                if not vis[node.node_id][neighbor.node_id]: 
-                    stack.append(self.nodes_adjacency_list[neighbor.node_id])
-                    vis[node.node_id][neighbor.node_id] = True
-                    break
+                self.__dfs_paths_finding(neighbor.node_id, dest_node_id, nodes, paths)
                 neighbor = neighbor.next
-            if neighbor == None :
-                stack.pop()
-        return paths
+        if len(nodes) > 0 :
+            nodes.pop()
+                
 
     def set_road_vechicels_val(self, source, target, vehicles):
         if self.is_legal_edge(source, target):
@@ -175,8 +174,8 @@ class Road(Edge):
  
     def set_vechiceles(self, vehicles):
         if vehicles > self.capacity or vehicles < 0:
-            logging.debug("vechicles is out of capacity now vechicles {}".format(self.vehicles) + 
-                "and new vechicles {}".format(vehicles))
+            logging.debug("vechicles is out of capacity {}".format(self.capacity) + 
+                " coming vechicles {}".format(vehicles))
             return False
         self.vehicles = int(vehicles)
         return True

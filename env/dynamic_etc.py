@@ -1,6 +1,7 @@
 import gym
 import math
 import random
+import json
 from env.traffic_graph import TrafficGraph
 from env.dyetc_state import DyETCState
 import logging
@@ -11,7 +12,7 @@ MAX_TIMESTEP = 6
 INTERVALS = 10
 CONSTANT_A = 0.15
 CONSTANT_B = 4
-SENSITIVITY_TO_TRAVEL_COST = 0.5
+SENSITIVITY_TO_TRAVEL_COST = -0.5
 VALUE_OF_TIME = 0.5
 ACTION_UPPER_BOUND = 6
 
@@ -23,12 +24,12 @@ class DynamicETC(gym.Env):
         memory: 存放 timestep 及之前的状态
     
     """     
-    def __init__(self, graph):
-        self.state = DyETCState(graph)
+    def __init__(self, graph, init_state=None):
+        self.state = DyETCState(graph, init_state)
         self.memory = [self.state]
         self.max_timestep = MAX_TIMESTEP
         self.timestep = 0
-
+        
         self.tau = INTERVALS
         self.omega = VALUE_OF_TIME
         self.omega_prime = SENSITIVITY_TO_TRAVEL_COST
@@ -56,7 +57,7 @@ class DynamicETC(gym.Env):
         return self.state, reward, terminal, info
     
     def reset(self):
-        self.state = DyETCState(self.state.traffic_graph)
+        self.state = self.memory[0]
         self.timestep = 0
         self.memory = [self.state]
         return self.state
@@ -99,9 +100,7 @@ class DynamicETC(gym.Env):
                     road_out = self.__cal_road_out(road_id, zone_id)
                     road_in = self.__cal_road_in(road_id, zone_id)
                     next_state[road_id][zone_id] = vehicles_of_road_to_destination  - road_out + road_in
-                    #  new vehilces added to road
-                    # self.history_state[self.timestep+1][i][j] += random.randint(8, 12) * self.tau * self.peek_rate
-        
+
         return self.state.update(next_state)
     
     def __cal_road_in(self, road_id, dest_zone_id):
@@ -120,7 +119,6 @@ class DynamicETC(gym.Env):
 
         target_road = graph.get_road_by_id(road_id)
         primary_od_demand = origin_dest_pair_matrix[target_road.source][dest_zone_id].demand
-
         related_in_roads = graph.get_edges_target_is_node(target_road.source)
         secondary_od_demand = 0
         # find the road which target point is source point of target road
@@ -133,8 +131,8 @@ class DynamicETC(gym.Env):
                 target_road.source, dest_zone_id, target_road)
         result = 0
         for path in paths_contains_target_road:
-            result = (result + (primary_od_demand + secondary_od_demand) 
-                * self.__portion_of_traffic_demand(target_road.source, dest_zone_id, path))
+            portion = self.__portion_of_traffic_demand(target_road.source, dest_zone_id, path)
+            result = (result + (primary_od_demand + secondary_od_demand) * portion)
         return result
 
     def __cal_road_out(self, road_id, dest_zone_id):
@@ -189,6 +187,7 @@ class DynamicETC(gym.Env):
             [type] -- [description]
         """        
         origin_dest_pair_matrix = self.state.origin_dest_pair_matrix
+    
         if origin == destination:
             return 0
         # origin -> dest 上的所有路径
@@ -200,6 +199,8 @@ class DynamicETC(gym.Env):
         if base == 0.0:
             print(" error")
         portion = math.exp(-self.omega_prime * self.__cal_travel_cost(target_path))/ base
+        if portion < 0.01:
+            print("in")
         return portion
     
     def __cal_travel_cost(self, path):
@@ -221,5 +222,5 @@ class DynamicETC(gym.Env):
         """           
         vechicels_in_road = road.vehicles * 1.0
         travel_time = road.free_flow_travel_time * (1 + self.constant_a 
-            * (vechicels_in_road / road.capacity) ** self.constant_b)
+            * (vechicels_in_road / road.capacity * 1.0) ** self.constant_b)
         return travel_time

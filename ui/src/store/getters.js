@@ -12,7 +12,6 @@ export default{
         for (let dyetcState of state.trajectory) {
             originDestPairMatrixHisotry.push(dyetcState.originDestPairMatrix)
         }
-        console.log(originDestPairMatrixHisotry)
         return originDestPairMatrixHisotry
     }
 }

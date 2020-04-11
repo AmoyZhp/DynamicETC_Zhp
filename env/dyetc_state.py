@@ -45,10 +45,10 @@ class DyETCState():
             if (len(traffic_state) > 0 and len(traffic_state) == len(self.traffic_state)
                 and len(traffic_state[0]) == len(self.traffic_state[0])):
                 self.traffic_state = traffic_state
-                self.__update_graph()
-                self.__update_od()
         else:
-            self.__random_init()
+            self.__random_init_traffic_state()
+        self.__update_graph()
+        self.__update_od()
 
     def update(self, new_state):
         next_state = DyETCState(self.traffic_graph, new_state)
@@ -57,7 +57,7 @@ class DyETCState():
     def get_traffic_graph(self):
         return self.traffic_graph
 
-    def __random_init(self):
+    def __random_init_traffic_state(self):
         roads = self.traffic_graph.get_all_roads()
         # 初始化 traffic state
         for road in roads:
@@ -84,13 +84,8 @@ class DyETCState():
         # 更新每一个 OD 的 demand 值
         for row in self.origin_dest_pair_matrix:
             for od in row:
-                if od == None:
-                    continue
-                roads = od.get_contained_roads()
-                od.set_demand(0)
-                for road in roads:
-                    if road.source == od.origin:
-                        od.add_demand(self.traffic_state[road.edge_id][od.destination])
+                if od != None:
+                    od.set_demand(random.randint(PEEK_DEMAND[0], PEEK_DEMAND[1]) * 0.6 * 5)
 
     def __update_graph(self):
         # 更新图上每条路的车辆的数目
@@ -131,4 +126,4 @@ class OriginDestinationPair():
         self.demand += num
     
     def set_demand(self, num):
-        self.demand = 0
+        self.demand = num

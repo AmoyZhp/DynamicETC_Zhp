@@ -10,6 +10,8 @@ export default {
 
     [INIT_STATE](state, payload) {
         state.timestep = 0
+
+        state.trajectory = []
         let trajectory = payload.trajectory
         for (let dyetcState of trajectory) {
             let trafficState = dyetcState.trafficState
@@ -66,7 +68,6 @@ export default {
                 originDestPairMatrix: originDestPairMatrix,
             })
         }
-        console.log(state.trajectory)
     },
 
     [INIT_GRAPH](state, containerName) {
