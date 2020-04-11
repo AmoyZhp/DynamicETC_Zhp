@@ -17,16 +17,16 @@ class Runner():
 
     def run(self,filename, init_state_from_file=False):
         graph = self.init_graph(filename)
-        init_state = None
-        init_state_data_filename = GRAPH_CONFIG_PATH + filename + '-init_state.data'
+        init_data = None
+        init_data_filename = GRAPH_CONFIG_PATH + filename + '-init_state.data'
         if init_state_from_file:
-            init_state = self.read_init_state_from_file(init_state_data_filename)
-        dyenv = DynamicETC(graph, init_state)
+            init_data = self.read_init_state_from_file(init_data_filename)
+        dyenv = DynamicETC(graph, init_data)
         action_space = dyenv.action_space
         agents = self.init_agents(graph)
         state = dyenv.reset()
         if init_state_from_file == False:
-            self.write_state_to_file(state, init_state_data_filename)
+            self.write_state_to_file(state, init_data_filename)
         while True:
             actions = {}
             # 获取联合行动

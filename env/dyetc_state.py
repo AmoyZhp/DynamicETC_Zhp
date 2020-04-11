@@ -3,12 +3,7 @@ import random
 import logging
 import math
 logging.basicConfig(level=10,
-         format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s') 
-
-LENGTH_INTERVAL = [4, 10]
-PEEK_DEMAND = [8, 12]
-INIT_VEHICLES_RATE = [0.5, 0.7]
-INIT_PEEK_RATE = 0.6
+                    format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s')
 
 class DyETCState():
     """用来表示 DyETC 的一个整体的环境状态。它主要有三个子项
@@ -16,77 +11,87 @@ class DyETCState():
         traffic_graph: 是交通的图表示
         origin_dest_pair_matrix: 是一个 |V| x |V| 的矩阵。
             (row, col) 表示起始点是 row 终点是 col 的origin destination pair 
-    """    
-    def __init__(self, traffic_graph:TrafficGraph, traffic_state=None):
+    """
+
+    def __init__(self, traffic_graph: TrafficGraph, init_data):
         self.traffic_graph = traffic_graph
         edges_cnt = traffic_graph.get_edges_cnt()
         nodes_cnt = traffic_graph.get_nodes_cnt()
         # E x V
-        self.traffic_state = [ [0 for _ in range(nodes_cnt)] 
-                    for _ in range(edges_cnt) ]
+        self.traffic_state = [[0 for _ in range(nodes_cnt)]
+                              for _ in range(edges_cnt)]
         self.origin_dest_pair_list = []
         self.origin_dest_pair_matrix = []
         for _ in range(nodes_cnt):
-                row = []
-                for _ in range(nodes_cnt):
-                    row.append(None)
-                self.origin_dest_pair_matrix.append(row)
+            row = []
+            for _ in range(nodes_cnt):
+                row.append(None)
+            self.origin_dest_pair_matrix.append(row)
         # 初始化 OD list 和 martix
         nodes_cnt = self.traffic_graph.get_nodes_cnt()
         for origin in range(nodes_cnt):
             for dest in range(nodes_cnt):
-                paths = self.traffic_graph.get_paths_between_nodes(origin, dest)
+                paths = self.traffic_graph.get_paths_between_nodes(
+                    origin, dest)
                 if len(paths) > 0:
-                    od = OriginDestinationPair(origin, dest ,paths)
+                    od = OriginDestinationPair(origin, dest, paths)
                     self.origin_dest_pair_matrix[origin][dest] = od
                     self.origin_dest_pair_list.append(od)
-        # 如果有初始化 state 就用传入的 state 初始化，否则就随机初始化
-        if traffic_state != None:
-            if (len(traffic_state) > 0 and len(traffic_state) == len(self.traffic_state)
-                and len(traffic_state[0]) == len(self.traffic_state[0])):
-                self.traffic_state = traffic_state
-        else:
-            self.__random_init_traffic_state()
-        self.__update_graph()
-        self.__update_od()
-
-    def update(self, new_state):
-        next_state = DyETCState(self.traffic_graph, new_state)
-        return next_state
-    
-    def get_traffic_graph(self):
-        return self.traffic_graph
-
-    def __random_init_traffic_state(self):
-        roads = self.traffic_graph.get_all_roads()
+        
+        # 初始化 路 的参数
+        roads_data = init_data['roads']
+        for road_data in roads_data.values():
+            source = road_data['source']
+            target = road_data['target']
+            self.traffic_graph.init_road_length(source, target,
+                road_data['length'])
+            self.traffic_graph.set_road_vechicels_val(source, target, road_data['vehicles'])
+        
         # 初始化 traffic state
-        for road in roads:
-            # 初始化每条路上的车辆的数目
-            length = random.randint(LENGTH_INTERVAL[0], LENGTH_INTERVAL[1])
-            self.traffic_graph.init_road_length(road.source, road.target, length)
-            vehicles = road.capacity * random.uniform(INIT_VEHICLES_RATE[0], INIT_VEHICLES_RATE[1])
-            self.traffic_graph.set_road_vechicels_val(road.source, road.target, vehicles)
-            self.traffic_graph.set_road_toll(road.source, road.target, random.randint(0, 6))
-            # 将路上的车辆的目的地平均分配到经过的点
-            cnt = 0
-            for i in range(len(self.traffic_state[road.edge_id])):
-                if road.source != i:
-                    paths = self.traffic_graph.get_paths_between_nodes(road.source, i)
-                    if len(paths) != 0:
-                        cnt += 1
-            for i in range(len(self.traffic_state[road.edge_id])):
-                if road.source != i:
-                    paths = self.traffic_graph.get_paths_between_nodes(road.source, i)
-                    if len(paths) != 0:
-                        self.traffic_state[road.edge_id][i] = int(road.vehicles / cnt)
+        traffic_state_data = init_data['traffic_state']
+        if (len(traffic_state_data) == len(self.traffic_state) and 
+            len(traffic_state_data[0]) == len(self.traffic_state[0])):
+            for row in range(len(self.traffic_state)):
+                vehicles_cnt = 0
+                for col in range(len(self.traffic_state[row])):
+                    self.traffic_state[row][col] = traffic_state_data[row][col]
+                    vehicles_cnt += traffic_state_data[row][col]
+                if roads_data[row]['vehicles'] - vehicles_cnt > 5:
+                    logging.debug('vehicles on road and vehicles put on state is not matched')
+        else:
+            logging.debug('traffic state dim is not matched witch init data')
+        
+        # 初始化 Origin Destination Pair 矩阵
+        odp_martix = init_data['odp_matrix']
+        if (len(odp_martix) == len(self.origin_dest_pair_matrix) and
+                len(odp_martix[0]) == len(self.origin_dest_pair_matrix[0])):
+            for row in range(len(self.origin_dest_pair_matrix)):
+                for col in range(len(self.origin_dest_pair_matrix[row])):
+                    odp = self.origin_dest_pair_matrix[row][col]
+                    if odp != None:
+                        odp.set_demand(odp_martix[row][col])
+        
+    def assign_tolls(self, source, target, toll):
+        pass
 
-    def __update_od(self):
-        # 更新每一个 OD 的 demand 值
-        for row in self.origin_dest_pair_matrix:
-            for od in row:
-                if od != None:
-                    od.set_demand(random.randint(PEEK_DEMAND[0], PEEK_DEMAND[1]) * 0.6 * 5)
+    def get_odp(self, origin, dest):
+        pass
 
+    def add_traffic_state_num(self, road_id, dest_id, num):
+        pass
+    
+    def set_demand_of_odp(self, origin, dest, demand):
+        pass
+
+    def copy(self):
+        pass
+    
+    def get_all_roads(self):
+        return self.traffic_graph.get_all_roads()
+
+    def get_all_nodes(self):
+        return self.traffic_graph.get_all_nodes()
+                            
     def __update_graph(self):
         # 更新图上每条路的车辆的数目
         roads = self.traffic_graph.get_all_roads()
@@ -94,8 +99,8 @@ class DyETCState():
             vehicles = 0
             for num in self.traffic_state[road.edge_id]:
                 vehicles += num
-            self.traffic_graph.set_road_vechicels_val(road.source, road.target, vehicles)
-    
+            self.traffic_graph.set_road_vechicels_val(
+                road.source, road.target, vehicles)
 
 
 class OriginDestinationPair():
@@ -107,7 +112,8 @@ class OriginDestinationPair():
             demand: the traffic between origin and destination, it is a integer number
             path set: all path connect origin to destination. it is a set. each element is a list. the list element is road, 
                 roads concat become a path
-    """    
+    """
+
     def __init__(self, origin, destination, paths):
         self.origin = origin
         self.destination = destination
@@ -124,6 +130,6 @@ class OriginDestinationPair():
 
     def add_demand(self, num):
         self.demand += num
-    
+
     def set_demand(self, num):
         self.demand = num
