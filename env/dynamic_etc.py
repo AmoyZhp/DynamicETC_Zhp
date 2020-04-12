@@ -30,7 +30,7 @@ class DynamicETC(gym.Env):
 
     """
 
-    def __init__(self, graph, init_state=None):
+    def __init__(self, graph_data, state_data=None):
         self.tau = INTERVALS
         self.omega = VALUE_OF_TIME
         self.omega_prime = SENSITIVITY_TO_TRAVEL_COST
@@ -39,10 +39,7 @@ class DynamicETC(gym.Env):
         self.peek_rate = INIT_PEEK_RATE
         self.max_timestep = MAX_TIMESTEP
 
-        if init_state == None:
-            init_state = self.__random_init_state(graph)
-
-        self.state = DyETCState(graph, init_state)
+        self.state = DyETCState(graph_data, state_data)
         self.memory = [self.state]
 
         self.timestep = 0
@@ -79,12 +76,10 @@ class DynamicETC(gym.Env):
         pass
 
     def __cal_reward(self):
-        graph = self.state.traffic_graph
-        traffic_state = self.state.traffic_state
-        roads = graph.get_all_roads()
+        roads = self.state.get_all_roads()
         reward = 0
         for road in roads:
-            vechicels_number = traffic_state[road.edge_id][road.target]
+            vechicels_number = self.state.get_zone_demand_on_road(road.edge_id, road.target)
             reward += vechicels_number * self.tau / (road.free_flow_travel_time * (1 + self.constant_a
                                                                                    * (vechicels_number / road.capacity) ** self.constant_b))
         return reward
@@ -94,7 +89,7 @@ class DynamicETC(gym.Env):
         nodes = self.state.get_all_nodes()
         for road in roads:
             toll = tolls[road.edge_id]
-            self.state.assign_tolls(road.source, road.target, toll)
+            self.state.set_toll_to_road(road.source, road.target, toll)
             for node in nodes:
                 # 如果路的起点等于目的则跳过
                 if road.source == node.node_id:
@@ -106,7 +101,7 @@ class DynamicETC(gym.Env):
                     road_out = self.__cal_road_out(road_id, dest_id)
                     road_in = self.__cal_road_in(road_id, dest_id)
                     add_vehicles = road_in - road_out
-                    self.state.add_traffic_state_num(
+                    self.state.add_zone_demand_on_road(
                         road_id, dest_id, add_vehicles)
         return self.state
 
@@ -237,70 +232,3 @@ class DynamicETC(gym.Env):
                                                     * (vechicels_in_road / road.capacity * 1.0) ** self.constant_b)
         return travel_time
 
-    def __random_init_state(self, graph: TrafficGraph):
-        """ 如果没有传入初始状态的设定，则使用该函数随机初始化交通状态
-
-        Arguments:
-            graph {TrafficGraph} -- 
-
-        Returns:
-            [dict] -- 包含初始化状态所需要的信息
-        """
-        roads = graph.get_all_roads()
-        nodes = graph.get_all_edges()
-        edges_cnt = graph.get_edges_cnt()
-        nodes_cnt = graph.get_nodes_cnt()
-
-        init_state = {}
-
-        # 初始化路上的车辆数目
-        roads_dict = {}
-        traffic_state = [[0 for _ in range(nodes_cnt)]
-                         for _ in range(edges_cnt)]
-        for road in roads:
-            # 初始化每条路上的车辆的数目
-            length = random.randint(LENGTH_INTERVAL[0], LENGTH_INTERVAL[1])
-            road.init_length(length)
-            vehicles = int(road.capacity *
-                           random.uniform(INIT_VEHICLES_RATE[0], INIT_VEHICLES_RATE[1]))
-            roads_dict[road.edge_id] = {
-                'source': road.source,
-                'target': road.target,
-                'length': length,
-                'vehicles': vehicles,
-            }
-            # 将路上的车辆的目的地平均分配到经过的点
-            cnt = 0
-            for i in range(nodes_cnt):
-                if road.source != i:
-                    paths = graph.get_paths_between_nodes(
-                        road.source, i)
-                    if len(paths) != 0:
-                        cnt += 1
-            for i in range(nodes_cnt):
-                if road.source != i:
-                    paths = graph.get_paths_between_nodes(
-                        road.source, i)
-                    if len(paths) != 0:
-                        traffic_state[road.edge_id][i] = int(
-                            vehicles / cnt)
-        init_state['roads'] = roads_dict
-        init_state['traffic_state'] = traffic_state
-
-        # 初始化 odp 矩阵
-        odp_matrix = []
-        for _ in range(nodes_cnt):
-            row = []
-            for _ in range(nodes_cnt):
-                row.append(None)
-            odp_matrix.append(row)
-        for origin in range(nodes_cnt):
-            for dest in range(nodes_cnt):
-                paths = graph.get_paths_between_nodes(
-                    origin, dest)
-                if len(paths) > 0:
-                    odp_matrix[origin][dest] = int(random.randint(
-                        PEEK_DEMAND[0], PEEK_DEMAND[1]) * self.peek_rate * self.tau)
-
-        init_state['odp_matrix'] = odp_matrix
-        return init_state

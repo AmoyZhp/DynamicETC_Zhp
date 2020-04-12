@@ -56,9 +56,13 @@ class TrafficGraph(StaticGraph):
             nodes.pop()
                 
 
-    def set_road_vechicels_val(self, source, target, vehicles):
+    def set_road_vehicles_val(self, source, target, vehicles):
         if self.is_legal_edge(source, target):
-            self.edges_martix[source][target].set_vechiceles(vehicles)
+            self.edges_martix[source][target].set_vehicles(vehicles)
+    
+    def add_road_vehicles_val(self, source, target, vehicles):
+        if self.is_legal_edge(source, target):
+            self.edges_martix[source][target].add_vehicles(vehicles)
     
     def set_road_toll(self, source, target, toll):
        if self.is_legal_edge(source, target):
@@ -172,16 +176,24 @@ class Road(Edge):
         self.toll = toll
         return True
  
-    def set_vechiceles(self, vehicles):
+    def set_vehicles(self, vehicles):
         if vehicles > self.capacity or vehicles < 0:
-            logging.debug("vechicles is out of capacity {}".format(self.capacity) + 
-                " coming vechicles {}".format(vehicles))
+            logging.debug("vehicles is out of capacity {}".format(self.capacity) + 
+                          " coming vehicles {}".format(vehicles))
             return False
         self.vehicles = int(vehicles)
         return True
+    
+    def add_vehicles(self, num):
+        if self.vehicles + num > self.capacity or self.vehicles + num < 0:
+            logging.debug("vehicles is out of capacity {}".format(self.capacity) +
+                          " coming vehicles {}".format(self.vehicles + num))
+            return False
+        self.vehicles += num
+        return True
 
     def __str__(self):
-        s = "Road : id {}, source {} , target {}, vechicles {}".format(
+        s = "Road : id {}, source {} , target {}, vehicles {}".format(
             self.id, self.source, self.target, self.vehicles)
         s += "length {}, capacity {}, free_flow_travel_time {}, toll {}, label {} \n".format(
             self.length, self.capacity, self.free_flow_travel_time, self.toll, self.label)

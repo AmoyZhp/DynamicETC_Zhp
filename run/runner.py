@@ -1,5 +1,5 @@
 from env.dynamic_etc import DynamicETC
-from agent.default_agent import DefaultAgent 
+from agent.default_agent import DefaultAgent
 from env.traffic_graph import TrafficGraph
 from env.dyetc_state import DyETCState
 import yaml
@@ -8,25 +8,24 @@ import random
 
 GRAPH_CONFIG_PATH = "/Users/zhanghaopeng/CodeHub/2020Spring/DyETC/env/config/"
 
+
 class Runner():
     def __init__(self):
         super().__init__()
-    
+
     def process_state_to_obs(self, state, i):
         return []
 
-    def run(self,filename, init_state_from_file=False):
-        graph = self.init_graph(filename)
-        init_data = None
-        init_data_filename = GRAPH_CONFIG_PATH + filename + '-init_state.data'
+    def run(self, filename, init_state_from_file=False):
+        graph_data = self.read_graph_data(filename)
+        state_data = None
         if init_state_from_file:
-            init_data = self.read_init_state_from_file(init_data_filename)
-        dyenv = DynamicETC(graph, init_data)
-        action_space = dyenv.action_space
-        agents = self.init_agents(graph)
+            state_data = self.read_init_state_from_file(filename)
+        dyenv = DynamicETC(graph_data, state_data)
+        agents = self.init_agents(state_data)
         state = dyenv.reset()
         if init_state_from_file == False:
-            self.write_state_to_file(state, init_data_filename)
+            self.write_state_to_file(state, filename)
         while True:
             actions = {}
             # 获取联合行动
@@ -39,8 +38,8 @@ class Runner():
                 break
             state = next_state
         self.toJsonFile(dyenv)
-    
-    def init_agents(self, graph:TrafficGraph):
+
+    def init_agents(self, graph: TrafficGraph):
         agents = {}
         roads = graph.get_all_roads()
         for road in roads:
@@ -48,31 +47,31 @@ class Runner():
             agents[road.edge_id] = agent
         return agents
 
-    def init_graph(self,filename):
+    def read_graph_data(self, filename):
         """ 初始化的图只有边和节点的信息，具体的 车辆等信息 在 dyetc env 在完成初始化 
         """
         data = self.get_yaml_data(GRAPH_CONFIG_PATH + filename + '.yml')
         nodes = data['nodes']
         roads = data['edges']
-        graph = TrafficGraph(nodes, roads)
-        return graph
-        
-    def generate_graph(self,node_cnt):
+        return {'nodes': nodes, 'edges': roads}
+
+    def generate_graph(self, node_cnt):
         """ this method focus structue of graph, dose't concern about value of road or node 
         """
         nodes = []
         for i in range(node_cnt):
-            nodes.append({"id" : i})
+            nodes.append({"id": i})
         edges = []
         for i in range(node_cnt):
             for j in range(node_cnt):
-                if i == j: continue
-                r = random.randint(0,1)
-                if r  == 1:
-                    edges.append({"source" : i, "target": j})
+                if i == j:
+                    continue
+                r = random.randint(0, 1)
+                if r == 1:
+                    edges.append({"source": i, "target": j})
         data = {
-            "nodes" : nodes,
-            "edges" : edges,
+            "nodes": nodes,
+            "edges": edges,
         }
         filename = "graph-" + str(node_cnt) + ".yml"
         with open(GRAPH_CONFIG_PATH+filename + '.yml', "w", encoding="utf-8") as f:
@@ -116,7 +115,7 @@ class Runner():
                     'freeFlowTravelTime': road.free_flow_travel_time,
                     'label': road.label
                 })
-        
+
             origin_destination_pairs = []
             for od in odp_list:
                 if(od != None):
@@ -126,8 +125,8 @@ class Runner():
                     origin_destination_pairs.append({
                         'origin': od.origin,
                         'destination': od.destination,
-                        'demand' : od.demand,
-                        'containedRoads' : contained_roads_list
+                        'demand': od.demand,
+                        'containedRoads': contained_roads_list
                     })
             trajectory.append({
                 "zones": zones,
@@ -135,35 +134,36 @@ class Runner():
                 "trafficState": state.traffic_state,
                 "originDestPairs": origin_destination_pairs,
             })
-            
+
         send_data = {
-            "trajectory" : trajectory
+            "trajectory": trajectory
         }
         with open('./ui/public/data.json', 'w') as f:
-            json.dump(send_data, f, sort_keys=True, indent=4, separators=(',', ': '))
-    
-    def write_state_to_file(self, state:DyETCState, filename):
-        data = {'state': state.traffic_state}
-        graph = state.traffic_graph
-        roads = graph.get_all_roads()
-        roads_data = []
-        for road in roads:
-            roads_data.append({
-                'source': road.source,
-                'target': road.target,
-                'length': road.length,
-                'capacity': road.capacity,
-                'free_flow_travel_time': road.free_flow_travel_time,
-                'vehicles': road.vehicles,
-                'road' : road.toll,
-            })
-        data['roads'] = roads_data
-        with open(filename, 'w') as f:
-            f.write(json.dumps(data))
+            json.dump(send_data, f, sort_keys=True,
+                      indent=4, separators=(',', ': '))
+
+    def write_state_to_file(self, state: DyETCState, filename):
+        pass
+        # data = {'state': state.traffic_state}
+        # graph = state.traffic_graph
+        # roads = graph.get_all_roads()
+        # roads_data = []
+        # for road in roads:
+        #     roads_data.append({
+        #         'source': road.source,
+        #         'target': road.target,
+        #         'length': road.length,
+        #         'capacity': road.capacity,
+        #         'free_flow_travel_time': road.free_flow_travel_time,
+        #         'vehicles': road.vehicles,
+        #         'road': road.toll,
+        #     })
+        # data['roads'] = roads_data
+        # with open(filename, 'w') as f:
+        #     f.write(json.dumps(data))
 
     def read_init_state_from_file(self, filename):
-        with open(filename, 'r') as f:
+        with open(GRAPH_CONFIG_PATH + filename + '-init_state.data', 'r') as f:
             data = json.loads(f.read())
             state = data['state']
             return state
-        

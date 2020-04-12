@@ -141,6 +141,24 @@ class StaticGraph():
             return False
         else:
             return True
+    
+    def to_json_data(self):
+        data = {}
+        nodes_data = []
+        edges_data = []
+        for node in self.nodes_list:
+            nodes_data.append({
+                'id': node.node_id,
+                'label': node.label
+            })
+        for edge in self.edges_list:
+            edges_data.append({
+                'source': edge.source,
+                'target': edge.target,
+            })
+        data['nodes'] = nodes_data
+        data['edges'] = edges_data
+        return data
 
 
 class Node():
