@@ -1,0 +1,7 @@
+{"state": [[0, 0, 47, 47, 47, 47, 47], 
+[0, 0, 39, 39, 39, 39, 39], 
+[0, 0, 0, 52, 52, 52, 52], 
+[0, 0, 0, 47, 47, 47, 47], 
+[0, 0, 0, 29, 29, 29, 29], 
+[0, 0, 0, 0, 0, 0, 203], 
+[0, 0, 0, 0, 0, 0, 160]], "roads": [{"source": 0, "target": 2, "length": 7, "capacity": 350, "free_flow_travel_time": 3.5, "vehicles": 235, "road": 0.0}, {"source": 1, "target": 2, "length": 6, "capacity": 300, "free_flow_travel_time": 3.0, "vehicles": 197, "road": 0.0}, {"source": 2, "target": 3, "length": 7, "capacity": 350, "free_flow_travel_time": 3.5, "vehicles": 209, "road": 0.0}, {"source": 2, "target": 4, "length": 7, "capacity": 350, "free_flow_travel_time": 3.5, "vehicles": 189, "road": 0.0}, {"source": 2, "target": 5, "length": 4, "capacity": 200, "free_flow_travel_time": 2.0, "vehicles": 118, "road": 0.0}, {"source": 3, "target": 6, "length": 7, "capacity": 350, "free_flow_travel_time": 3.5, "vehicles": 203, "road": 0.0}, {"source": 4, "target": 6, "length": 5, "capacity": 250, "free_flow_travel_time": 2.5, "vehicles": 160, "road": 0.0}]}
